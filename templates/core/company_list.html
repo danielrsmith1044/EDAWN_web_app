@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}My Companies – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-building me-2"></i>My Assigned Companies</h4>
+</div>
+
+<!-- Filter bar -->
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <span class="text-muted small me-1">Filter:</span>
+      <a href="?status=active"
+         class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        Active
+      </a>
+      <a href="?status=completed"
+         class="btn btn-sm {% if status_filter == 'completed' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+        Visited
+      </a>
+      <a href="?status=lost"
+         class="btn btn-sm {% if status_filter == 'lost' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+        Lost
+      </a>
+      <a href="?status=all"
+         class="btn btn-sm {% if status_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        All
+      </a>
+    </div>
+  </div>
+</div>
+
+{% if assignments %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Company</th>
+          <th>Location</th>
+          <th>Industry</th>
+          <th class="text-center">Attempts</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for assignment in assignments %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ assignment.company.name }}</div>
+            {% if assignment.company.primary_contact_name %}
+            <div class="text-muted small">
+              {{ assignment.company.primary_contact_name }}
+              {% if assignment.company.primary_contact_title %}, {{ assignment.company.primary_contact_title }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td>
+            <small class="text-muted">
+              {% if assignment.company.city %}
+                {{ assignment.company.city }}{% if assignment.company.state %}, {{ assignment.company.state }}{% endif %}
+              {% else %}—{% endif %}
+            </small>
+          </td>
+          <td><small class="text-muted">{{ assignment.company.industry|default:"—" }}</small></td>
+          <td class="text-center">
+            <span class="badge rounded-pill
+              {% if assignment.contact_attempt_count >= 3 %}bg-danger
+              {% elif assignment.contact_attempt_count == 2 %}bg-warning text-dark
+              {% else %}bg-secondary{% endif %}">
+              {{ assignment.contact_attempt_count }}/3
+            </span>
+          </td>
+          <td>
+            {% if assignment.status == 'active' %}
+              <span class="badge rounded-pill" style="background:var(--edawn-teal);">Active</span>
+            {% elif assignment.status == 'completed' %}
+              <span class="badge bg-success rounded-pill">Visited</span>
+            {% elif assignment.status == 'lost' %}
+              <span class="badge bg-danger rounded-pill">Lost</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'company_detail' assignment.pk %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-eye"></i> View
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-building fs-2 d-block mb-2"></i>
+    No companies found{% if status_filter != 'all' %} with this status{% endif %}.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

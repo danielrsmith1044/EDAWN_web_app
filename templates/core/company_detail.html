@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.name }} – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'company_list' %}">My Companies</a></li>
+      <li class="breadcrumb-item active">{{ company.name }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <h4 class="mb-0 fw-bold">{{ company.name }}</h4>
+    {% if assignment.status == 'active' %}
+      <span class="badge rounded-pill fs-6" style="background:var(--edawn-teal);">Active</span>
+    {% elif assignment.status == 'completed' %}
+      <span class="badge bg-success rounded-pill fs-6">Visited</span>
+    {% elif assignment.status == 'lost' %}
+      <span class="badge bg-danger rounded-pill fs-6">Lost</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Company info + actions -->
+  <div class="col-lg-4">
+
+    <!-- Company Info -->
+    <div class="card mb-4">
+      <div class="card-header py-3"><i class="bi bi-info-circle me-2"></i>Company Info</div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          {% if company.industry %}
+          <dt class="col-5 text-muted">Industry</dt>
+          <dd class="col-7">{{ company.industry }}</dd>
+          {% endif %}
+
+          {% if company.address or company.city %}
+          <dt class="col-5 text-muted">Address</dt>
+          <dd class="col-7">
+            {% if company.address %}{{ company.address }}<br>{% endif %}
+            {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}
+              {% if company.zip_code %} {{ company.zip_code }}{% endif %}{% endif %}
+          </dd>
+          {% endif %}
+
+          {% if company.phone %}
+          <dt class="col-5 text-muted">Phone</dt>
+          <dd class="col-7"><a href="tel:{{ company.phone }}">{{ company.phone }}</a></dd>
+          {% endif %}
+
+          {% if company.email %}
+          <dt class="col-5 text-muted">Email</dt>
+          <dd class="col-7 text-truncate"><a href="mailto:{{ company.email }}">{{ company.email }}</a></dd>
+          {% endif %}
+
+          {% if company.website %}
+          <dt class="col-5 text-muted">Website</dt>
+          <dd class="col-7 text-truncate">
+            <a href="{{ company.website }}" target="_blank" rel="noopener">
+              {{ company.website|truncatechars:30 }}
+            </a>
+          </dd>
+          {% endif %}
+
+          {% if company.primary_contact_name %}
+          <dt class="col-5 text-muted">Contact</dt>
+          <dd class="col-7">
+            {{ company.primary_contact_name }}
+            {% if company.primary_contact_title %}
+            <br><span class="text-muted">{{ company.primary_contact_title }}</span>
+            {% endif %}
+          </dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+
+    {% if assignment.is_active %}
+    <!-- Actions -->
+    <div class="card mb-4">
+      <div class="card-header py-3"><i class="bi bi-lightning me-2"></i>Actions</div>
+      <div class="card-body d-grid gap-2">
+
+        <a href="{% url 'log_visit' assignment.pk %}" class="btn btn-primary">
+          <i class="bi bi-check2-circle me-1"></i> Log a Visit
+        </a>
+
+        <button class="btn btn-outline-secondary" type="button"
+                data-bs-toggle="collapse" data-bs-target="#contactForm" aria-expanded="false">
+          <i class="bi bi-telephone me-1"></i> Log Contact Attempt
+          <span class="badge bg-secondary ms-1">{{ contact_attempts.count }}/3</span>
+        </button>
+
+        <div class="collapse" id="contactForm">
+          <div class="border rounded p-3">
+            {% if attempts_remaining > 0 %}
+            <form method="post" action="{% url 'log_contact_attempt' assignment.pk %}">
+              {% csrf_token %}
+              <div class="mb-2">
+                <label class="form-label small fw-semibold mb-1">Method</label>
+                {{ contact_form.method }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold mb-1">Notes</label>
+                {{ contact_form.notes }}
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-sm btn-warning">
+                  Log Attempt
+                  <span class="opacity-75 ms-1">({{ attempts_remaining }} left before Lost)</span>
+                </button>
+              </div>
+            </form>
+            {% else %}
+            <p class="text-danger small mb-0">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              3 attempts reached — this company is marked as Lost.
+            </p>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {% elif assignment.status == 'completed' %}
+    <div class="card border-success mb-4">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-check-circle-fill text-success fs-1"></i>
+        <div class="fw-bold mt-2 text-success">Visit Completed</div>
+        {% if assignment.completed_date %}
+        <div class="text-muted small">{{ assignment.completed_date|date:"M d, Y" }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% elif assignment.status == 'lost' %}
+    <div class="card border-danger mb-4">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-x-circle-fill text-danger fs-1"></i>
+        <div class="fw-bold mt-2 text-danger">Marked as Lost</div>
+        <div class="text-muted small">3 contact attempts with no success</div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT: Visit notes + contact attempts -->
+  <div class="col-lg-8">
+
+    <!-- Visit Notes -->
+    {% if visit_notes %}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <i class="bi bi-journal-check me-2"></i>Visit Notes
+      </div>
+      <div class="card-body">
+        {% for note in visit_notes %}
+        <div class="{% if not forloop.last %}mb-4 pb-4 border-bottom{% endif %}">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold small">
+              {{ note.visited_by.get_full_name|default:note.visited_by.username }}
+            </span>
+            <span class="text-muted small">{{ note.visit_date|date:"M d, Y g:i A" }}</span>
+          </div>
+          <p class="mb-2">{{ note.notes }}</p>
+          {% if note.follow_up_needed %}
+          <div class="alert alert-warning py-2 px-3 mb-0 small">
+            <i class="bi bi-flag-fill me-1"></i>
+            <strong>Follow-up needed:</strong>
+            {{ note.follow_up_notes|default:"(no details provided)" }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Contact Attempts -->
+    <div class="card">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-telephone-x me-2"></i>Contact Attempts</span>
+        <span class="badge rounded-pill
+          {% if contact_attempts.count >= 3 %}bg-danger
+          {% elif contact_attempts.count == 2 %}bg-warning text-dark
+          {% else %}bg-secondary{% endif %}">
+          {{ contact_attempts.count }} / 3
+        </span>
+      </div>
+      {% if contact_attempts %}
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for attempt in contact_attempts %}
+          <li class="list-group-item px-3 py-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <span class="badge bg-secondary rounded-pill me-2">{{ attempt.get_method_display }}</span>
+                {% if attempt.notes %}
+                <span class="small text-muted">{{ attempt.notes }}</span>
+                {% endif %}
+              </div>
+              <small class="text-muted text-nowrap ms-2">{{ attempt.attempt_date|date:"M d, Y" }}</small>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-telephone-x fs-2 d-block mb-2"></i>
+        No contact attempts logged yet.
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

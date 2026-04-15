@@ -5,48 +5,42 @@
 {% block content %}
 <div class="page-header">
   <h4 class="mb-0 fw-bold"><i class="bi bi-trophy me-2"></i>Leaderboard</h4>
-  <small class="text-muted">Rankings based on completed tasks</small>
+  <small class="text-muted">Rankings based on completed company visits</small>
 </div>
 
 {% if users %}
 <div class="row g-4">
-  <!-- Top 3 podium -->
-  {% if users|length >= 1 %}
+
+  <!-- Top-3 podium -->
   <div class="col-12">
     <div class="row justify-content-center g-3 mb-2">
       {% for u in users|slice:":3" %}
       <div class="col-sm-4 col-md-3">
         <div class="card text-center h-100 {% if forloop.counter == 1 %}border-warning{% endif %}">
           <div class="card-body py-4">
-            <div class="mb-2">
-              {% if forloop.counter == 1 %}
-                <i class="bi bi-trophy-fill text-warning fs-1"></i>
-              {% elif forloop.counter == 2 %}
-                <i class="bi bi-trophy-fill text-secondary fs-2"></i>
-              {% else %}
-                <i class="bi bi-trophy-fill fs-2" style="color:#cd7f32;"></i>
-              {% endif %}
-            </div>
+            {% if forloop.counter == 1 %}
+              <i class="bi bi-trophy-fill text-warning fs-1 d-block mb-2"></i>
+            {% elif forloop.counter == 2 %}
+              <i class="bi bi-trophy-fill text-secondary fs-2 d-block mb-2"></i>
+            {% else %}
+              <i class="bi bi-trophy-fill fs-2 d-block mb-2" style="color:#cd7f32;"></i>
+            {% endif %}
             <div class="fw-bold fs-5">{{ u.get_full_name|default:u.username }}</div>
-            <div class="display-6 fw-bold {% if forloop.counter == 1 %}text-warning{% elif forloop.counter == 2 %}text-secondary{% else %}text-warning{% endif %}"
-                 style="{% if forloop.counter == 3 %}color:#cd7f32 !important;{% endif %}">
+            <div class="display-6 fw-bold
+              {% if forloop.counter == 1 %}text-warning
+              {% elif forloop.counter == 2 %}text-secondary{% endif %}"
+              style="{% if forloop.counter == 3 %}color:#cd7f32;{% endif %}">
               {{ u.completed_count }}
             </div>
-            <div class="text-muted small">tasks completed</div>
-            {% with total=total_tasks_by_user|default_if_none:0 %}
-            {% if total_tasks_by_user %}
-            <div class="text-muted small mt-1">
-              of {{ total_tasks_by_user|default:0 }} assigned
+            <div class="text-muted small">
+              {{ u.completed_count|pluralize:"company,companies" }} visited
             </div>
-            {% endif %}
-            {% endwith %}
           </div>
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
-  {% endif %}
 
   <!-- Full ranking table -->
   <div class="col-12">
@@ -57,45 +51,28 @@
           <thead class="table-light">
             <tr>
               <th style="width:70px;">Rank</th>
-              <th>Name</th>
-              <th class="text-center">Completed</th>
-              <th class="text-center">Total Assigned</th>
-              <th class="text-center">Completion Rate</th>
+              <th>Volunteer</th>
+              <th class="text-center">Companies Visited</th>
             </tr>
           </thead>
           <tbody>
             {% for u in users %}
             <tr {% if u == request.user %}class="table-primary"{% endif %}>
               <td>
-                <span class="leaderboard-rank {% if forloop.counter == 1 %}rank-1{% elif forloop.counter == 2 %}rank-2{% elif forloop.counter == 3 %}rank-3{% endif %}">
+                <span class="leaderboard-rank
+                  {% if forloop.counter == 1 %}rank-1
+                  {% elif forloop.counter == 2 %}rank-2
+                  {% elif forloop.counter == 3 %}rank-3{% endif %}">
                   #{{ forloop.counter }}
                 </span>
               </td>
               <td>
                 <span class="fw-semibold">{{ u.get_full_name|default:u.username }}</span>
-                {% if u == request.user %}<span class="badge bg-primary ms-2 rounded-pill">You</span>{% endif %}
-              </td>
-              <td class="text-center fw-bold text-success">{{ u.completed_count }}</td>
-              <td class="text-center text-muted">
-                {% with tot=total_tasks_by_user %}
-                {{ tot|default:"—" }}
-                {% endwith %}
-              </td>
-              <td class="text-center">
-                {% with tot=total_tasks_by_user %}
-                {% if tot and tot > 0 %}
-                <div class="d-flex align-items-center justify-content-center gap-2">
-                  {% widthratio u.completed_count tot 100 as pct %}
-                  <div class="progress flex-grow-1" style="height:8px; max-width:100px;">
-                    <div class="progress-bar bg-success" style="width:{{ pct }}%"></div>
-                  </div>
-                  <small>{{ pct }}%</small>
-                </div>
-                {% else %}
-                —
+                {% if u == request.user %}
+                <span class="badge bg-primary ms-2 rounded-pill">You</span>
                 {% endif %}
-                {% endwith %}
               </td>
+              <td class="text-center fw-bold">{{ u.completed_count }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -103,12 +80,13 @@
       </div>
     </div>
   </div>
+
 </div>
 {% else %}
 <div class="card">
   <div class="card-body text-center py-5 text-muted">
     <i class="bi bi-trophy fs-2 d-block mb-2"></i>
-    No completed tasks yet. Be the first on the board!
+    No visits recorded yet. Be the first on the board!
   </div>
 </div>
 {% endif %}
