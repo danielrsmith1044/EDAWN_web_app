@@ -70,6 +70,25 @@
   </div>
 </div>
 
+{% if user.is_staff %}
+<!-- Admin Quick Actions -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'quick_add_company' %}" class="btn btn-outline-primary">
+    <i class="bi bi-building-add me-1"></i>Add Company
+  </a>
+  <a href="{% url 'quick_assign' %}" class="btn btn-outline-primary">
+    <i class="bi bi-person-plus me-1"></i>Assign Company
+    {% if unassigned_count %}<span class="badge bg-danger ms-1">{{ unassigned_count }}</span>{% endif %}
+  </a>
+  <a href="{% url 'quick_invite' %}" class="btn btn-outline-primary">
+    <i class="bi bi-link-45deg me-1"></i>Invite Volunteer
+  </a>
+  <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-shield-lock me-1"></i>Admin Panel
+  </a>
+</div>
+{% endif %}
+
 <div class="row g-4">
   <!-- Assigned Companies (To-Do) -->
   <div class="col-lg-7">
@@ -115,32 +134,73 @@
     </div>
   </div>
 
-  <!-- Goals + Leaderboard -->
+  <!-- Badges, Messages & Leaderboard -->
   <div class="col-lg-5">
-    <!-- Goals -->
+    <!-- Badges -->
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span><i class="bi bi-bullseye me-2"></i>My Goals</span>
-        <a href="{% url 'goal_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+        <span><i class="bi bi-award me-2"></i>My Badges ({{ badge_count }}/{{ total_badges }})</span>
+        <a href="{% url 'badge_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
       </div>
       <div class="card-body">
-        {% if my_goals %}
-          {% for goal in my_goals|slice:":4" %}
-          <div class="mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <a href="{% url 'goal_detail' goal.pk %}"
-                 class="text-decoration-none text-dark fw-semibold small">{{ goal.title }}</a>
-              <small class="text-muted">{{ goal.progress_percentage }}%</small>
+        {% if my_badges %}
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+          {% for ub in my_badges %}
+          <div class="text-center" style="width:72px;">
+            <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1"
+                 style="width:48px; height:48px; background:{{ ub.badge.color }}; color:#fff; font-size:20px;">
+              <i class="bi {{ ub.badge.icon }}"></i>
             </div>
-            <div class="progress" style="height:8px;">
-              <div class="progress-bar {% if goal.is_complete %}bg-success{% endif %}"
-                   style="width:{{ goal.progress_percentage }}%"></div>
-            </div>
-            <small class="text-muted">{{ goal.current_value }} / {{ goal.target_value }}</small>
+            <small class="d-block fw-semibold" style="font-size:.7rem; line-height:1.2;">{{ ub.badge.name }}</small>
           </div>
           {% endfor %}
+        </div>
         {% else %}
-        <p class="text-muted text-center small py-3">No goals yet.</p>
+        <p class="text-muted text-center small py-3">
+          No badges earned yet. Complete visits and tasks to earn badges!
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Messages -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span><i class="bi bi-chat-square-text me-2"></i>Recent Messages</span>
+        <div>
+          <a href="{% url 'message_create' %}" class="btn btn-sm btn-primary me-1"><i class="bi bi-plus-lg me-1"></i>New</a>
+          <a href="{% url 'message_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        {% if recent_messages %}
+        <ul class="list-group list-group-flush">
+          {% for msg in recent_messages %}
+          <li class="list-group-item py-2 px-3">
+            <a href="{% url 'message_detail' msg.pk %}" class="text-decoration-none text-dark">
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold small flex-grow-1">
+                  {{ msg.subject|truncatewords:8 }}
+                  {% if msg.is_private %}
+                  <i class="bi bi-lock-fill text-warning" style="font-size:.7rem;"></i>
+                  {% endif %}
+                </span>
+                {% if msg.reply_count %}
+                <span class="badge bg-primary rounded-pill" style="font-size:.65rem;">{{ msg.reply_count }}</span>
+                {% endif %}
+              </div>
+              <small class="text-muted">
+                {{ msg.sender.get_full_name|default:msg.sender.username }} &middot; {{ msg.created_at|timesince }} ago
+              </small>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-center py-3 text-muted small">
+          <i class="bi bi-chat-square-text d-block mb-1"></i>
+          No messages yet.
+        </div>
         {% endif %}
       </div>
     </div>

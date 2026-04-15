@@ -1,0 +1,179 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}EDAWN Administration{% endblock %}
+
+{% block content %}
+<style>
+  .admin-dashboard { max-width: 1100px; }
+  .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .action-card {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px;
+    text-decoration: none; color: #333; transition: box-shadow .15s, border-color .15s, transform .15s;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .action-card:hover { box-shadow: 0 4px 16px rgba(1,70,132,.15); border-color: #008b99; color: #333; text-decoration: none; transform: translateY(-2px); }
+  .action-card .icon { font-size: 32px; margin-bottom: 8px; }
+  .action-card .label { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #014684; }
+  .action-card .desc { font-size: 12px; color: #666; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .stat-card {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
+    text-align: center; border-top: 3px solid #008b99;
+  }
+  .stat-card .number { font-size: 28px; font-weight: 700; color: #014684; }
+  .stat-card .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
+
+  .section-heading { font-size: 16px; font-weight: 600; color: #014684; margin-bottom: 12px; border-bottom: 2px solid #008b99; padding-bottom: 6px; }
+
+  .recent-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
+  .recent-table th { background: #e3edf7; padding: 10px 14px; text-align: left; font-size: 12px; color: #014684; text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid #008b99; }
+  .recent-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .recent-table tr:last-child td { border-bottom: none; }
+  .recent-table tr:hover td { background: #e0f5f7; }
+  .recent-table a { color: #008b99; text-decoration: none; font-weight: 500; }
+  .recent-table a:hover { color: #014684; }
+
+  .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .status-active { background: #e0f5f7; color: #006570; }
+  .status-completed { background: #d4edda; color: #155724; }
+  .status-lost { background: #f8d7da; color: #721c24; }
+  .status-unassigned { background: #e2e3e5; color: #383d41; }
+  .status-assigned { background: #e3edf7; color: #014684; }
+  .status-visited { background: #d4edda; color: #155724; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+
+<div class="admin-dashboard">
+  <h2 style="color: #014684; margin-bottom: 4px;">Welcome back, {{ user.get_full_name|default:user.username }}</h2>
+  <p style="color: #666; margin-bottom: 24px;">Manage companies, assignments, and volunteers from here.</p>
+
+  <!-- Quick Actions -->
+  <h3 class="section-heading">Quick Actions</h3>
+  <div class="quick-actions">
+    <a href="{% url 'admin:core_company_add' %}" class="action-card">
+      <div class="icon" style="color:#008b99;">&#x1f3e2;</div>
+      <div class="label">Add Company</div>
+      <div class="desc">Create a new company record</div>
+    </a>
+    <a href="{% url 'admin:core_assignment_add' %}" class="action-card">
+      <div class="icon" style="color:#014684;">&#x1f91d;</div>
+      <div class="label">Assign Volunteer</div>
+      <div class="desc">Assign a company to a volunteer</div>
+    </a>
+    <a href="{% url 'admin:core_company_changelist' %}?status__exact=unassigned" class="action-card">
+      <div class="icon" style="color:#dc3545;">&#x1f4cb;</div>
+      <div class="label">Unassigned Companies</div>
+      <div class="desc">View companies needing volunteers</div>
+    </a>
+    <a href="{% url 'admin:core_company_changelist' %}import-csv/" class="action-card">
+      <div class="icon" style="color:#6c757d;">&#x1f4c4;</div>
+      <div class="label">Import CSV</div>
+      <div class="desc">Bulk import companies from a file</div>
+    </a>
+    <a href="{% url 'admin:generate-invite' %}" class="action-card">
+      <div class="icon" style="color:#198754;">&#x1f517;</div>
+      <div class="label">Invite Volunteer</div>
+      <div class="desc">Generate a registration link</div>
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <h3 class="section-heading">Overview</h3>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="number">{{ total_companies }}</div>
+      <div class="stat-label">Total Companies</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">{{ unassigned_count }}</div>
+      <div class="stat-label">Unassigned</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">{{ active_assignments }}</div>
+      <div class="stat-label">Active Assignments</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">{{ total_visited }}</div>
+      <div class="stat-label">Visited</div>
+    </div>
+    <div class="stat-card">
+      <div class="number">{{ total_volunteers }}</div>
+      <div class="stat-label">Volunteers</div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="two-col">
+    <div>
+      <h3 class="section-heading">Recent Assignments</h3>
+      <table class="recent-table">
+        <thead>
+          <tr><th>Company</th><th>Volunteer</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for a in recent_assignments %}
+          <tr>
+            <td><a href="{% url 'admin:core_assignment_change' a.pk %}">{{ a.company.name }}</a></td>
+            <td>{{ a.volunteer.get_full_name|default:a.volunteer.username }}</td>
+            <td><span class="status-badge status-{{ a.status }}">{{ a.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" style="text-align:center; color:#999;">No assignments yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h3 class="section-heading">Recently Added Companies</h3>
+      <table class="recent-table">
+        <thead>
+          <tr><th>Company</th><th>Industry</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for c in recent_companies %}
+          <tr>
+            <td><a href="{% url 'admin:core_company_change' c.pk %}">{{ c.name }}</a></td>
+            <td>{{ c.industry|default:"—" }}</td>
+            <td><span class="status-badge status-{{ c.status }}">{{ c.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" style="text-align:center; color:#999;">No companies yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Standard admin modules (collapsed) -->
+  <details style="margin-top:32px;">
+    <summary style="cursor:pointer; font-size:14px; color:#666; font-weight:600;">All Admin Sections</summary>
+    <div style="margin-top:12px;">
+      {% for app in app_list %}
+      <div class="module" style="margin-bottom:12px;">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section">{{ app.name }}</a></caption>
+          {% for model in app.models %}
+          <tr>
+            <th scope="row">
+              {% if model.admin_url %}<a href="{{ model.admin_url }}">{{ model.name }}</a>{% else %}{{ model.name }}{% endif %}
+            </th>
+            <td>
+              {% if model.add_url %}<a href="{{ model.add_url }}" class="addlink">Add</a>{% endif %}
+            </td>
+            <td>
+              {% if model.admin_url %}<a href="{{ model.admin_url }}" class="changelink">View</a>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+</div>
+{% endblock %}

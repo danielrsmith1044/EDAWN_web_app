@@ -9,16 +9,25 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
 
+    # Admin quick actions (staff only)
+    path('admin-actions/add-company/', views.quick_add_company, name='quick_add_company'),
+    path('admin-actions/assign/',      views.quick_assign,      name='quick_assign'),
+    path('admin-actions/invite/',      views.quick_invite,      name='quick_invite'),
+
     # Companies
     path('companies/',                      views.company_list,         name='company_list'),
     path('companies/<int:pk>/',             views.company_detail,       name='company_detail'),
     path('companies/<int:pk>/contact/',     views.log_contact_attempt,  name='log_contact_attempt'),
     path('companies/<int:pk>/visit/',       views.log_visit,            name='log_visit'),
 
-    # Goals
-    path('goals/',          views.goal_list,   name='goal_list'),
-    path('goals/<int:pk>/', views.goal_detail, name='goal_detail'),
+    # Badges
+    path('badges/', views.badge_list, name='badge_list'),
 
     # Leaderboard
     path('leaderboard/', views.leaderboard, name='leaderboard'),
+
+    # Messages
+    path('messages/',              views.message_list,   name='message_list'),
+    path('messages/new/',          views.message_create,  name='message_create'),
+    path('messages/<int:pk>/',     views.message_detail,  name='message_detail'),
 ]

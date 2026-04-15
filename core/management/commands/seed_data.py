@@ -7,14 +7,15 @@ Creates realistic test data:
   - Assignments spread across volunteers
   - Contact attempts (some leading to Lost)
   - Visit notes (marking companies Visited)
-  - Goals for each volunteer
+  - Badges auto-awarded based on activity
 """
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import Assignment, Company, ContactAttempt, Goal, VisitNote
+from core.models import Assignment, Company, ContactAttempt, VisitNote
+from core.badges import check_and_award_badges
 
 
 VOLUNTEERS = [
@@ -123,19 +124,6 @@ class Command(BaseCommand):
         self.stdout.write(f"  {len(companies)} companies ready")
 
         # ----------------------------------------------------------------
-        # Goals for each volunteer
-        # ----------------------------------------------------------------
-        goal_templates = [
-            ("Visit 10 Companies",  10, 0),
-            ("Contact Attempts",    20, 0),
-        ]
-        for vol in volunteers:
-            for title, target, current in goal_templates:
-                Goal.objects.get_or_create(user=vol, title=title, defaults=dict(
-                    target_value=target, current_value=current,
-                ))
-
-        # ----------------------------------------------------------------
         # Assignments — spread companies across volunteers
         # Scenario breakdown across 30 companies:
         #   6  visited
@@ -203,12 +191,11 @@ class Command(BaseCommand):
 
             # else: active with no attempts yet
 
-        # Update goal progress to reflect actual data
+        # Award badges based on seeded activity
         for vol in volunteers:
-            completed = Assignment.objects.filter(volunteer=vol, status=Assignment.STATUS_COMPLETED).count()
-            attempts  = ContactAttempt.objects.filter(attempted_by=vol).count()
-            Goal.objects.filter(user=vol, title="Visit 10 Companies").update(current_value=completed)
-            Goal.objects.filter(user=vol, title="Contact Attempts").update(current_value=attempts)
+            earned = check_and_award_badges(vol)
+            if earned:
+                self.stdout.write(f"  {vol.username} earned: {', '.join(b.name for b in earned)}")
 
         counts = {
             "visited": Assignment.objects.filter(status="completed").count(),

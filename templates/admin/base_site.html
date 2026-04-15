@@ -1,0 +1,199 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | EDAWN Admin{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  :root {
+    --primary: #008b99;
+    --secondary: #014684;
+    --accent: #008b99;
+    --header-color: #014684;
+    --header-branding-color: #014684;
+  }
+
+  /* Top header bar */
+  #header {
+    background: #014684;
+    color: #fff;
+  }
+  #header a:link, #header a:visited {
+    color: #fff;
+  }
+  #header a:hover {
+    color: #e0f5f7;
+  }
+
+  /* Breadcrumbs */
+  div.breadcrumbs {
+    background: #008b99;
+    color: #fff;
+  }
+  div.breadcrumbs a {
+    color: #fff;
+  }
+  div.breadcrumbs a:hover {
+    color: #e0f5f7;
+  }
+
+  /* Module headers / captions */
+  .module h2, .module caption {
+    background: #014684;
+    color: #fff;
+  }
+
+  /* Links */
+  a:link, a:visited {
+    color: #008b99;
+  }
+  a:hover {
+    color: #014684;
+  }
+
+  /* Buttons */
+  .submit-row input, .submit-row a.button,
+  input[type="submit"], .button, a.button {
+    background: #008b99;
+    border-color: #008b99;
+    color: #fff;
+  }
+  .submit-row input:hover, .submit-row a.button:hover,
+  input[type="submit"]:hover, .button:hover, a.button:hover {
+    background: #014684;
+    border-color: #014684;
+  }
+  input[type="submit"].default, .submit-row input.default {
+    background: #008b99;
+    border-color: #008b99;
+  }
+  input[type="submit"].default:hover, .submit-row input.default:hover {
+    background: #014684;
+    border-color: #014684;
+  }
+
+  /* Delete / danger button stays red */
+  .deletelink, a.deletelink {
+    color: #dc3545 !important;
+  }
+
+  /* Calendar & date shortcuts */
+  .calendar td a:hover, .timelist a:hover,
+  .calendarbox .calendarnav-previous:hover,
+  .calendarbox .calendarnav-next:hover {
+    background: #008b99;
+    color: #fff;
+  }
+
+  /* Selected row highlight */
+  .results table tbody tr.selected {
+    background: #e0f5f7;
+  }
+
+  /* Object tools (action bar buttons) */
+  .object-tools a,
+  .object-tools a:link,
+  .object-tools a:visited {
+    background: #008b99;
+    color: #fff;
+    border-radius: 4px;
+  }
+  .object-tools a:hover {
+    background: #014684;
+  }
+  .object-tools a.addlink {
+    background: #008b99;
+  }
+  .object-tools a.addlink:hover {
+    background: #014684;
+  }
+
+  /* Change list filters */
+  #changelist-filter h2 {
+    background: #014684;
+    color: #fff;
+    padding: 8px 12px;
+  }
+  #changelist-filter li.selected a {
+    color: #014684;
+    font-weight: 700;
+  }
+
+  /* Tab / nav links in admin */
+  .change-list .filtered .results,
+  .change-list .filtered .paginator {
+    margin-right: 0;
+  }
+
+  /* Related widget wrapper buttons */
+  .related-widget-wrapper-link {
+    color: #008b99;
+  }
+  .related-widget-wrapper-link:hover {
+    color: #014684;
+  }
+
+  /* Inline group headers */
+  .inline-group h2 {
+    background: #014684;
+    color: #fff;
+  }
+  .inline-related h3 {
+    background: #e3edf7;
+    color: #014684;
+    border-color: #c6d6e8;
+  }
+
+  /* Success / error messages */
+  .messagelist .success { background: #d4edda; }
+  .messagelist .error { background: #f8d7da; }
+
+  /* User tools */
+  #user-tools {
+    font-size: 12px;
+  }
+  #user-tools a {
+    color: rgba(255,255,255,.85);
+    border-bottom: 1px solid transparent;
+  }
+  #user-tools a:hover {
+    color: #fff;
+    border-bottom-color: #008b99;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:8px;">
+    <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="height:28px;">
+    EDAWN Administration
+  </a>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+<div style="background:rgba(0,0,0,.15); padding:6px 20px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+  <div style="display:flex; gap:18px;">
+    <a href="{% url 'admin:core_company_changelist' %}" style="color:rgba(255,255,255,.85); text-decoration:none;">
+      Companies
+    </a>
+    <a href="{% url 'admin:core_assignment_changelist' %}" style="color:rgba(255,255,255,.85); text-decoration:none;">
+      Assignments
+    </a>
+    <a href="{% url 'admin:core_message_changelist' %}" style="color:rgba(255,255,255,.85); text-decoration:none;">
+      Messages
+    </a>
+    <a href="{% url 'admin:auth_user_changelist' %}" style="color:rgba(255,255,255,.85); text-decoration:none;">
+      Volunteers
+    </a>
+    <a href="{% url 'admin:core_invitecode_changelist' %}" style="color:rgba(255,255,255,.85); text-decoration:none;">
+      Invite Codes
+    </a>
+  </div>
+  <a href="{% url 'dashboard' %}" style="color:#fff; text-decoration:none; font-weight:600;">
+    &larr; Back to Portal
+  </a>
+</div>
+{% endblock %}

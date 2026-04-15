@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Badges – EDAWN{% endblock %}
+
+{% block extra_css %}
+<style>
+  .badge-card {
+    text-align: center;
+    padding: 24px 16px;
+    border-radius: 12px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .badge-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+  .badge-card.earned { background: #fff; }
+  .badge-card.locked { background: #f8f9fa; opacity: .55; }
+  .badge-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 28px;
+    color: #fff;
+  }
+  .badge-card.locked .badge-icon { background: #adb5bd !important; }
+  .badge-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .badge-desc { font-size: 12px; color: #666; }
+  .badge-earned-date { font-size: 11px; color: var(--edawn-teal); font-weight: 600; margin-top: 8px; }
+  .badge-lock-label { font-size: 11px; color: #999; margin-top: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4 class="mb-0 fw-bold"><i class="bi bi-award me-2"></i>Badges</h4>
+    <small class="text-muted">{{ earned_count }} of {{ total_count }} earned</small>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="fw-semibold">Your Progress</span>
+      <span class="fw-bold" style="color:var(--edawn-teal);">
+        {{ earned_count }} / {{ total_count }}
+      </span>
+    </div>
+    <div class="progress" style="height:12px; border-radius:6px;">
+      {% widthratio earned_count total_count 100 as pct %}
+      <div class="progress-bar" style="width:{{ pct }}%; border-radius:6px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Badge grid -->
+<div class="row g-3">
+  {% for item in badges %}
+  <div class="col-6 col-md-4 col-lg-3">
+    <div class="card badge-card {% if item.earned %}earned{% else %}locked{% endif %}">
+      <div class="badge-icon" style="background:{{ item.badge.color }};">
+        {% if item.earned %}
+        <i class="bi {{ item.badge.icon }}"></i>
+        {% else %}
+        <i class="bi bi-lock-fill"></i>
+        {% endif %}
+      </div>
+      <div class="badge-name" {% if item.earned %}style="color:{{ item.badge.color }};"{% endif %}>
+        {{ item.badge.name }}
+      </div>
+      <div class="badge-desc">{{ item.badge.description }}</div>
+      {% if item.earned %}
+      <div class="badge-earned-date">
+        <i class="bi bi-check-circle-fill me-1"></i>Earned {{ item.earned_at|date:"M d, Y" }}
+      </div>
+      {% else %}
+      <div class="badge-lock-label">
+        <i class="bi bi-lock me-1"></i>Locked
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-award fs-2 d-block mb-2"></i>
+        No badges available yet.
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

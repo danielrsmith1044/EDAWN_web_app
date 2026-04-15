@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
@@ -106,6 +108,9 @@ class ContactAttempt(models.Model):
             self.assignment.save(update_fields=['status'])
             self.assignment.company.status = Company.STATUS_LOST
             self.assignment.company.save(update_fields=['status'])
+        # Check for badge awards
+        from .badges import check_and_award_badges
+        check_and_award_badges(self.attempted_by)
 
 
 class VisitNote(models.Model):
@@ -132,30 +137,99 @@ class VisitNote(models.Model):
             self.assignment.save(update_fields=['status', 'completed_date'])
             self.assignment.company.status = Company.STATUS_VISITED
             self.assignment.company.save(update_fields=['status'])
+        # Check for badge awards
+        from .badges import check_and_award_badges
+        check_and_award_badges(self.visited_by)
 
 
-class Goal(models.Model):
-    title         = models.CharField(max_length=200)
-    description   = models.TextField(blank=True)
-    user          = models.ForeignKey(User, on_delete=models.CASCADE, related_name='goals')
-    target_value  = models.DecimalField(max_digits=10, decimal_places=2)
-    current_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    due_date      = models.DateField(null=True, blank=True)
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
+class Badge(models.Model):
+    CRITERIA_CHOICES = [
+        ('visits_completed',    'Visits Completed'),
+        ('contact_attempts',    'Contact Attempts Logged'),
+        ('assignments_received', 'Assignments Received'),
+        ('manual',              'Manually Awarded'),
+    ]
+
+    name            = models.CharField(max_length=100, unique=True)
+    description     = models.TextField()
+    icon            = models.CharField(max_length=50, help_text="Bootstrap icon class, e.g. bi-star")
+    color           = models.CharField(max_length=7, default='#008b99', help_text="Hex color for the badge")
+    criteria_type   = models.CharField(max_length=30, choices=CRITERIA_CHOICES, default='manual')
+    criteria_value  = models.PositiveIntegerField(
+        default=0,
+        help_text="Threshold to auto-award (0 = manual only)",
+    )
+    sort_order      = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class UserBadge(models.Model):
+    user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='earned_badges')
+    badge     = models.ForeignKey(Badge, on_delete=models.CASCADE, related_name='awards')
+    earned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'badge')
+        ordering = ['-earned_at']
+
+    def __str__(self):
+        return f"{self.user.username} — {self.badge.name}"
+
+
+class Message(models.Model):
+    sender     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_sent')
+    subject    = models.CharField(max_length=200)
+    body       = models.TextField()
+    is_private = models.BooleanField(
+        default=False,
+        help_text="Private messages are only visible to admins and the sender",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.title} ({self.user.username})"
+        return self.subject
 
     @property
-    def progress_percentage(self):
-        if self.target_value == 0:
-            return 0
-        return min(100, int((self.current_value / self.target_value) * 100))
+    def reply_count(self):
+        return self.replies.count()
+
+
+class Reply(models.Model):
+    message    = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='replies')
+    sender     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='replies_sent')
+    body       = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name_plural = 'Replies'
+
+    def __str__(self):
+        return f"Reply to \"{self.message.subject}\" by {self.sender.username}"
+
+
+class InviteCode(models.Model):
+    code       = models.CharField(max_length=40, unique=True, default=uuid.uuid4)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='invites_created')
+    used_by    = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invite_used')
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at    = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        status = f"used by {self.used_by.username}" if self.used_by else "available"
+        return f"{str(self.code)[:8]}… ({status})"
 
     @property
-    def is_complete(self):
-        return self.current_value >= self.target_value
+    def is_available(self):
+        return self.used_by is None

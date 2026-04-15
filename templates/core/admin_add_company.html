@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Add Company – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item active">Add Company</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-building-add me-2"></i>Add Company</h4>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% for error in form.name.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Industry</label>
+              {{ form.industry }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Primary Contact</label>
+              {{ form.primary_contact_name }}
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">City</label>
+              {{ form.city }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">State</label>
+              {{ form.state }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Phone</label>
+              {{ form.phone }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email</label>
+            {{ form.email }}
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-plus-lg me-1"></i>Add Company
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header py-3">
+        <span><i class="bi bi-clock-history me-2"></i>Recently Added</span>
+      </div>
+      <div class="card-body p-0">
+        {% if recent %}
+        <ul class="list-group list-group-flush">
+          {% for co in recent %}
+          <li class="list-group-item py-2 px-3">
+            <div class="fw-semibold small">{{ co.name }}</div>
+            <small class="text-muted">
+              {{ co.industry|default:"—" }}
+              {% if co.city %}&middot; {{ co.city }}{% endif %}
+              &middot; {{ co.get_status_display }}
+            </small>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center small py-3">No companies yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

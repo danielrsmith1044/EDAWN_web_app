@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Messages – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4 class="mb-0 fw-bold">Messages</h4>
+    <small class="text-muted">Group discussion and private messages</small>
+  </div>
+  <a href="{% url 'message_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>New Message
+  </a>
+</div>
+
+<!-- Filter tabs -->
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <a class="nav-link {% if filter_type == 'group' %}active{% endif %}"
+       href="?filter=group">
+      <i class="bi bi-people me-1"></i>Group
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if filter_type == 'private' %}active{% endif %}"
+       href="?filter=private">
+      <i class="bi bi-lock me-1"></i>Private
+    </a>
+  </li>
+</ul>
+
+{% if messages_list %}
+<div class="list-group">
+  {% for msg in messages_list %}
+  <a href="{% url 'message_detail' msg.pk %}" class="list-group-item list-group-item-action py-3">
+    <div class="d-flex justify-content-between align-items-start">
+      <div class="flex-grow-1 me-3">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h6 class="mb-0 fw-semibold">{{ msg.subject }}</h6>
+          {% if msg.is_private %}
+          <span class="badge bg-warning text-dark" style="font-size:.7rem;">
+            <i class="bi bi-lock-fill"></i> Private
+          </span>
+          {% endif %}
+        </div>
+        <p class="text-muted small mb-1">{{ msg.body|truncatewords:30 }}</p>
+        <small class="text-muted">
+          <i class="bi bi-person"></i> {{ msg.sender.get_full_name|default:msg.sender.username }}
+          &middot; {{ msg.created_at|timesince }} ago
+          {% if msg.reply_count %}
+            &middot; <i class="bi bi-chat-dots"></i> {{ msg.reply_count }} repl{{ msg.reply_count|pluralize:"y,ies" }}
+          {% endif %}
+        </small>
+      </div>
+      <i class="bi bi-chevron-right text-muted"></i>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-chat-square-text fs-1 d-block mb-2"></i>
+  {% if filter_type == 'private' %}
+    No private messages yet.
+  {% else %}
+    No group messages yet. Start a conversation!
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

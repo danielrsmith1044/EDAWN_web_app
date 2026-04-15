@@ -1,17 +1,37 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Goal, ContactAttempt, VisitNote
+from .models import Assignment, Company, ContactAttempt, InviteCode, VisitNote, Message, Reply
 
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
 
 class RegisterForm(UserCreationForm):
-    email      = forms.EmailField(required=True)
-    first_name = forms.CharField(max_length=50, required=False)
-    last_name  = forms.CharField(max_length=50, required=False)
+    email       = forms.EmailField(required=True)
+    first_name  = forms.CharField(max_length=50, required=False)
+    last_name   = forms.CharField(max_length=50, required=False)
+    invite_code = forms.CharField(
+        max_length=40,
+        help_text="Enter the invite code provided by your admin.",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Invite code'}),
+    )
 
     class Meta:
         model  = User
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+
+    def clean_invite_code(self):
+        code = self.cleaned_data['invite_code'].strip()
+        try:
+            invite = InviteCode.objects.get(code=code)
+        except InviteCode.DoesNotExist:
+            raise forms.ValidationError("Invalid invite code.")
+        if not invite.is_available:
+            raise forms.ValidationError("This invite code has already been used.")
+        self._invite = invite
+        return code
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -20,8 +40,17 @@ class RegisterForm(UserCreationForm):
         user.last_name  = self.cleaned_data.get('last_name', '')
         if commit:
             user.save()
+            # Mark invite code as used
+            from django.utils import timezone
+            self._invite.used_by = user
+            self._invite.used_at = timezone.now()
+            self._invite.save(update_fields=['used_by', 'used_at'])
         return user
 
+
+# ---------------------------------------------------------------------------
+# Company Visitation
+# ---------------------------------------------------------------------------
 
 class ContactAttemptForm(forms.ModelForm):
     class Meta:
@@ -58,15 +87,79 @@ class VisitNoteForm(forms.ModelForm):
         }
 
 
-class GoalProgressForm(forms.ModelForm):
-    class Meta:
-        model  = Goal
-        fields = ('current_value',)
-        widgets = {
-            'current_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-        }
-        labels = {'current_value': 'Current Progress'}
+# ---------------------------------------------------------------------------
+# Messages
+# ---------------------------------------------------------------------------
 
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model  = Message
+        fields = ('subject', 'body', 'is_private')
+        widgets = {
+            'subject': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Subject',
+            }),
+            'body': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 5,
+                'placeholder': 'Write your message...',
+            }),
+            'is_private': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'is_private': 'Send as private message to admin',
+        }
+
+
+class ReplyForm(forms.ModelForm):
+    class Meta:
+        model  = Reply
+        fields = ('body',)
+        widgets = {
+            'body': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 3,
+                'placeholder': 'Write a reply...',
+            }),
+        }
+        labels = {'body': ''}
+
+
+# ---------------------------------------------------------------------------
+# Admin (portal-side)
+# ---------------------------------------------------------------------------
+
+class QuickCompanyForm(forms.ModelForm):
+    class Meta:
+        model  = Company
+        fields = ('name', 'industry', 'city', 'state', 'phone', 'email',
+                  'primary_contact_name')
+        widgets = {
+            'name':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Company name'}),
+            'industry':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Industry'}),
+            'city':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
+            'state':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'phone':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}),
+            'email':                forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
+            'primary_contact_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact name'}),
+        }
+
+
+class QuickAssignForm(forms.Form):
+    company = forms.ModelChoiceField(
+        queryset=Company.objects.filter(status=Company.STATUS_UNASSIGNED),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label='Select a company...',
+    )
+    volunteer = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True, is_staff=False),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label='Select a volunteer...',
+    )
+
+
+# ---------------------------------------------------------------------------
+# Admin (Django admin)
+# ---------------------------------------------------------------------------
 
 class CompanyCSVUploadForm(forms.Form):
     csv_file = forms.FileField(

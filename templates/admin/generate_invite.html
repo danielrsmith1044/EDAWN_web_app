@@ -1,0 +1,102 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:core_invitecode_changelist' %}">Invite Codes</a>
+  &rsaquo; Generate Invite
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+  .invite-box {
+    max-width: 650px;
+    margin: 0 auto;
+  }
+  .link-display {
+    background: #f0faf1; border: 2px solid #198754; border-radius: 8px;
+    padding: 20px; margin: 20px 0; text-align: center;
+  }
+  .link-display .url {
+    font-family: monospace; font-size: 14px; word-break: break-all;
+    background: #fff; border: 1px solid #dee2e6; border-radius: 4px;
+    padding: 10px 14px; display: block; margin: 10px 0;
+    user-select: all; cursor: pointer;
+  }
+  .copy-btn {
+    background: #008b99; color: #fff; border: none; border-radius: 4px;
+    padding: 8px 24px; cursor: pointer; font-size: 14px; font-weight: 600;
+  }
+  .copy-btn:hover { background: #014684; }
+  .generate-btn {
+    background: #008b99; color: #fff; border: none; border-radius: 6px;
+    padding: 12px 32px; cursor: pointer; font-size: 16px; font-weight: 600;
+    display: block; margin: 0 auto;
+  }
+  .generate-btn:hover { background: #014684; }
+  .available-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .available-table th { background: #f8f9fa; padding: 8px 12px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; border-bottom: 1px solid #dee2e6; }
+  .available-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .available-table .url-cell { font-family: monospace; font-size: 12px; cursor: pointer; user-select: all; }
+</style>
+
+<div class="invite-box">
+  {% if register_url %}
+  <div class="link-display">
+    <h3 style="color:#198754; margin:0 0 8px;">Invite Link Generated</h3>
+    <p style="color:#666; margin:0 0 8px; font-size:14px;">Share this link with the new volunteer:</p>
+    <code class="url" id="invite-url">{{ register_url }}</code>
+    <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+    <p id="copy-msg" style="color:#198754; font-size:13px; margin:8px 0 0; display:none;">Copied!</p>
+  </div>
+  {% endif %}
+
+  <div style="text-align:center; margin: 30px 0;">
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="generate-btn">Generate New Invite Link</button>
+    </form>
+    <p style="color:#666; font-size:13px; margin-top:8px;">Creates a single-use registration link.</p>
+  </div>
+
+  {% if available %}
+  <h3 style="font-size:15px; color:#014684; border-bottom:2px solid #008b99; padding-bottom:6px;">
+    Unused Invite Links
+  </h3>
+  <table class="available-table">
+    <thead>
+      <tr><th>Link</th><th>Created By</th><th>Created</th></tr>
+    </thead>
+    <tbody>
+      {% for inv in available %}
+      <tr>
+        <td class="url-cell" onclick="copyText(this)" title="Click to copy">
+          {{ request.scheme }}://{{ request.get_host }}/register/?invite={{ inv.code }}
+        </td>
+        <td>{{ inv.created_by.get_full_name|default:inv.created_by.username }}</td>
+        <td>{{ inv.created_at|date:"M d, g:i A" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+<script>
+function copyLink() {
+  const url = document.getElementById('invite-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    document.getElementById('copy-msg').style.display = 'block';
+    setTimeout(() => document.getElementById('copy-msg').style.display = 'none', 2000);
+  });
+}
+function copyText(el) {
+  navigator.clipboard.writeText(el.textContent.trim());
+  const orig = el.textContent;
+  el.textContent = 'Copied!';
+  setTimeout(() => el.textContent = orig, 1000);
+}
+</script>
+{% endblock %}

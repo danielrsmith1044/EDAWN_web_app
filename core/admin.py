@@ -9,14 +9,40 @@ from django.shortcuts import render
 from django.urls import path
 
 from .forms import CompanyCSVUploadForm
-from .models import Assignment, Company, ContactAttempt, Goal, VisitNote
+from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, UserBadge, VisitNote
 
 # ---------------------------------------------------------------------------
 # Site branding
 # ---------------------------------------------------------------------------
 admin.site.site_header  = "EDAWN Administration"
 admin.site.site_title   = "EDAWN Admin"
-admin.site.index_title  = "Site Administration"
+admin.site.index_title  = "Dashboard"
+
+
+# ---------------------------------------------------------------------------
+# Custom admin index context
+# ---------------------------------------------------------------------------
+_original_index = admin.AdminSite.index
+
+
+def _custom_index(self, request, extra_context=None):
+    extra_context = extra_context or {}
+    extra_context.update({
+        'total_companies':    Company.objects.count(),
+        'unassigned_count':   Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
+        'active_assignments': Assignment.objects.filter(status=Assignment.STATUS_ACTIVE).count(),
+        'total_visited':      Company.objects.filter(status=Company.STATUS_VISITED).count(),
+        'total_volunteers':   User.objects.filter(is_active=True, is_staff=False).count(),
+        'recent_assignments': (
+            Assignment.objects.select_related('company', 'volunteer')
+            .order_by('-assigned_date')[:8]
+        ),
+        'recent_companies':   Company.objects.order_by('-created_at')[:8],
+    })
+    return _original_index(self, request, extra_context=extra_context)
+
+
+admin.AdminSite.index = _custom_index
 
 # ---------------------------------------------------------------------------
 # User (re-register with search_fields for autocomplete)
@@ -27,6 +53,62 @@ admin.site.unregister(User)
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'first_name', 'last_name', 'email')
+
+
+# ---------------------------------------------------------------------------
+# Invite Codes
+# ---------------------------------------------------------------------------
+
+@admin.register(InviteCode)
+class InviteCodeAdmin(admin.ModelAdmin):
+    list_display    = ('short_code', 'status_display', 'created_by', 'used_by', 'created_at')
+    list_filter     = ('used_at',)
+    readonly_fields = ('code', 'created_by', 'used_by', 'used_at')
+    search_fields   = ('code', 'used_by__username', 'created_by__username')
+    exclude         = ('created_by',)
+
+    @admin.display(description='Code')
+    def short_code(self, obj):
+        return obj.code
+
+    @admin.display(description='Status')
+    def status_display(self, obj):
+        if obj.used_by:
+            return f"Used by {obj.used_by.username}"
+        return "Available"
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def get_urls(self):
+        return [
+            path('generate/', self.admin_site.admin_view(self.generate_invite_view),
+                 name='generate-invite'),
+        ] + super().get_urls()
+
+    def generate_invite_view(self, request):
+        """One-click invite generation with a copyable registration link."""
+        invite = None
+        register_url = None
+
+        if request.method == 'POST':
+            invite = InviteCode.objects.create(created_by=request.user)
+            register_url = request.build_absolute_uri(
+                f'/register/?invite={invite.code}'
+            )
+
+        # Show recent unused invites
+        available = InviteCode.objects.filter(used_by__isnull=True).select_related('created_by')[:10]
+
+        return render(request, 'admin/generate_invite.html', {
+            'title':        'Generate Invite Link',
+            'invite':       invite,
+            'register_url': register_url,
+            'available':    available,
+            'opts':         self.model._meta,
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -48,11 +130,12 @@ class VisitNoteInline(admin.TabularInline):
 
 
 class AssignmentInline(admin.TabularInline):
-    model           = Assignment
-    extra           = 0
-    readonly_fields = ('volunteer', 'assigned_by', 'assigned_date', 'status', 'completed_date')
-    can_delete      = False
-    show_change_link = True
+    model               = Assignment
+    extra               = 1
+    autocomplete_fields = ('volunteer',)
+    readonly_fields     = ('assigned_by', 'assigned_date', 'completed_date')
+    fields              = ('volunteer', 'status', 'assigned_by', 'assigned_date', 'completed_date')
+    show_change_link    = True
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +166,17 @@ class CompanyAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in instances:
+            if isinstance(obj, Assignment) and not obj.assigned_by_id:
+                obj.assigned_by = request.user
+            obj.save()
+            # Keep company status in sync
+            if isinstance(obj, Assignment) and obj.status == Assignment.STATUS_ACTIVE:
+                Company.objects.filter(pk=obj.company_id).update(status=Company.STATUS_ASSIGNED)
+        formset.save_m2m()
 
     def get_urls(self):
         return [
@@ -200,48 +294,61 @@ class AssignmentAdmin(admin.ModelAdmin):
             Company.objects.filter(pk=obj.company_id).update(status=Company.STATUS_ASSIGNED)
 
 
-# ---------------------------------------------------------------------------
-# ContactAttempt
-# ---------------------------------------------------------------------------
-
-@admin.register(ContactAttempt)
-class ContactAttemptAdmin(admin.ModelAdmin):
-    list_display  = ('assignment', 'attempted_by', 'method', 'attempt_date')
-    list_filter   = ('method', 'attempt_date')
-    search_fields = ('assignment__company__name', 'attempted_by__username', 'notes')
-    readonly_fields = ('attempt_date',)
+# ContactAttempt and VisitNote are managed via inlines on Assignment — not registered at top level.
 
 
 # ---------------------------------------------------------------------------
-# VisitNote
+# Badges
 # ---------------------------------------------------------------------------
 
-@admin.register(VisitNote)
-class VisitNoteAdmin(admin.ModelAdmin):
-    list_display  = ('assignment', 'visited_by', 'visit_date', 'follow_up_needed')
-    list_filter   = ('follow_up_needed', 'visit_date')
-    search_fields = ('assignment__company__name', 'visited_by__username', 'notes')
-    readonly_fields = ('visit_date',)
-
-
-# ---------------------------------------------------------------------------
-# Goal
-# ---------------------------------------------------------------------------
-
-@admin.register(Goal)
-class GoalAdmin(admin.ModelAdmin):
-    list_display  = ('title', 'user', 'current_value', 'target_value', 'progress_display', 'due_date')
-    list_filter   = ('due_date',)
-    search_fields = ('title', 'description', 'user__username')
+class UserBadgeInline(admin.TabularInline):
+    model          = UserBadge
+    extra          = 1
     autocomplete_fields = ('user',)
-    readonly_fields = ('created_at', 'updated_at')
-    ordering      = ('-created_at',)
-    fieldsets = (
-        (None,       {'fields': ('title', 'description', 'user')}),
-        ('Progress', {'fields': ('current_value', 'target_value', 'due_date')}),
-        ('Timestamps', {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
-    )
+    readonly_fields = ('earned_at',)
 
-    @admin.display(description='Progress')
-    def progress_display(self, obj):
-        return f"{obj.progress_percentage}% ({obj.current_value}/{obj.target_value})"
+
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display    = ('name', 'icon', 'criteria_type', 'criteria_value', 'times_awarded', 'sort_order')
+    list_filter     = ('criteria_type',)
+    list_editable   = ('sort_order',)
+    search_fields   = ('name', 'description')
+    ordering        = ('sort_order', 'name')
+    inlines         = [UserBadgeInline]
+
+    @admin.display(description='Awarded')
+    def times_awarded(self, obj):
+        return obj.awards.count()
+
+
+@admin.register(UserBadge)
+class UserBadgeAdmin(admin.ModelAdmin):
+    list_display      = ('user', 'badge', 'earned_at')
+    list_filter       = ('badge', 'earned_at')
+    search_fields     = ('user__username', 'user__first_name', 'user__last_name', 'badge__name')
+    autocomplete_fields = ('user', 'badge')
+    readonly_fields   = ('earned_at',)
+
+
+# ---------------------------------------------------------------------------
+# Messages
+# ---------------------------------------------------------------------------
+
+class ReplyInline(admin.TabularInline):
+    model          = Reply
+    extra          = 0
+    readonly_fields = ('sender', 'created_at')
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display    = ('subject', 'sender', 'is_private', 'reply_count', 'created_at')
+    list_filter     = ('is_private', 'created_at')
+    search_fields   = ('subject', 'body', 'sender__username', 'sender__first_name', 'sender__last_name')
+    readonly_fields = ('created_at',)
+    inlines         = [ReplyInline]
+
+    @admin.display(description='Replies')
+    def reply_count(self, obj):
+        return obj.replies.count()
