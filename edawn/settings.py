@@ -25,7 +25,8 @@ SECRET_KEY = "django-insecure-6a@vnh@x-x-b6rm5_6gnl7q&@je51eavelfl^y()q73yu#&(b!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = ['https://*.anthropic.com', 'https://*.claude.ai']
 
 
 # Application definition
