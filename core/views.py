@@ -17,8 +17,6 @@ from .ratelimit import ratelimit
 # ---------------------------------------------------------------------------
 
 def landing(request):
-    if request.user.is_authenticated:
-        return redirect('dashboard')
     return render(request, 'core/landing.html')
 
 
