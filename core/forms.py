@@ -3,6 +3,9 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Assignment, Company, ContactAttempt, InviteCode, VisitNote, Message, Reply
 
+_fc = {'class': 'form-control'}
+_fs = {'class': 'form-select'}
+
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -65,50 +68,106 @@ class ContactAttemptForm(forms.ModelForm):
         }
 
 
+class CompanyContactUpdateForm(forms.ModelForm):
+    """Prefilled from the Company record; saved back on visit submission."""
+    class Meta:
+        model  = Company
+        fields = ('primary_contact_name', 'primary_contact_title', 'phone', 'email')
+        widgets = {
+            'primary_contact_name':  forms.TextInput(attrs={**_fc, 'placeholder': 'Contact name'}),
+            'primary_contact_title': forms.TextInput(attrs={**_fc, 'placeholder': 'Title'}),
+            'phone': forms.TextInput(attrs={**_fc, 'placeholder': 'Phone'}),
+            'email': forms.EmailInput(attrs={**_fc, 'placeholder': 'Email'}),
+        }
+        labels = {
+            'primary_contact_name':  'Name',
+            'primary_contact_title': 'Title',
+            'phone': 'Phone',
+            'email': 'Email',
+        }
+
+
 class VisitNoteForm(forms.ModelForm):
     class Meta:
         model  = VisitNote
         fields = (
+            # Contact
+            'contact_name',
+            'additional_contact_name', 'additional_contact_title',
+            'additional_contact_phone', 'additional_contact_email',
+            # Notes
             'notes',
-            'expansion_adding_sq_footage',
-            'expansion_new_building',
-            'expansion_adding_equipment',
-            'expansion_capex_planned',
+            # Workforce
+            'hiring_status',
+            'employee_count', 'jobs_added_expected',
+            'jobs_added_last_year', 'jobs_lost_last_year',
+            # Facility
+            'building_size_sqft', 'at_capacity',
+            # Expansion
+            'expansion_adding_sq_footage', 'expansion_new_building',
+            'expansion_adding_equipment', 'expansion_capex_planned',
             'expansion_notes',
+            # Volunteer impact
+            'volunteer_helped', 'volunteer_helped_notes',
+            # Lead + follow-up
             'received_business_lead',
-            'follow_up_needed',
-            'follow_up_notes',
+            'follow_up_needed', 'follow_up_notes',
         )
         widgets = {
-            'notes': forms.Textarea(attrs={
-                'class': 'form-control', 'rows': 5,
-                'placeholder': 'What did you find out during the visit?',
-            }),
+            'contact_name': forms.TextInput(attrs={**_fc, 'placeholder': 'Name of person you spoke with'}),
+            'additional_contact_name':  forms.TextInput(attrs={**_fc, 'placeholder': 'Name'}),
+            'additional_contact_title': forms.TextInput(attrs={**_fc, 'placeholder': 'Title'}),
+            'additional_contact_phone': forms.TextInput(attrs={**_fc, 'placeholder': 'Phone'}),
+            'additional_contact_email': forms.EmailInput(attrs={**_fc, 'placeholder': 'Email'}),
+            'notes': forms.Textarea(attrs={**_fc, 'rows': 5,
+                'placeholder': 'What did you learn? What was the general tone of the conversation?'}),
+            'hiring_status':       forms.Select(attrs=_fs),
+            'employee_count':      forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 45', 'min': 0}),
+            'jobs_added_expected': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 10', 'min': 0}),
+            'jobs_added_last_year': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 5',  'min': 0}),
+            'jobs_lost_last_year':  forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 2',  'min': 0}),
+            'building_size_sqft': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 12000', 'min': 0}),
+            'at_capacity':        forms.Select(attrs=_fs),
             'expansion_adding_sq_footage': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'expansion_new_building':      forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'expansion_adding_equipment':  forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'expansion_capex_planned':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'expansion_notes': forms.Textarea(attrs={
-                'class': 'form-control', 'rows': 2,
-                'placeholder': 'Additional expansion details (optional)',
-            }),
+            'expansion_notes': forms.Textarea(attrs={**_fc, 'rows': 2,
+                'placeholder': 'Additional expansion details (optional)'}),
+            'volunteer_helped':       forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'volunteer_helped_notes': forms.Textarea(attrs={**_fc, 'rows': 3,
+                'placeholder': 'Describe how you helped...'}),
             'received_business_lead': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'follow_up_needed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'follow_up_notes':  forms.Textarea(attrs={
-                'class': 'form-control', 'rows': 3,
-                'placeholder': 'Describe the follow-up needed (optional)',
-            }),
+            'follow_up_notes':  forms.Textarea(attrs={**_fc, 'rows': 3,
+                'placeholder': 'Describe the follow-up needed (optional)'}),
         }
-        labels = {
-            'notes':                       'Visit Notes',
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['hiring_status'].required = True
+        self.fields['hiring_status'].empty_label = None
+
+    labels = {
+            'contact_name':            'Who did you speak with?',
+            'additional_contact_name': 'Name',
+            'notes':                   'Visit Notes',
+            'hiring_status':           'Hiring / Layoff Status',
+            'employee_count':          'Current Employees',
+            'jobs_added_expected':     'Expected Jobs to be Added',
+            'jobs_added_last_year':    'Jobs Added Last Year',
+            'jobs_lost_last_year':     'Jobs Lost Last Year',
+            'building_size_sqft':      'Current Building Size (sq ft)',
+            'at_capacity':             'At Capacity?',
             'expansion_adding_sq_footage': 'Adding square footage',
             'expansion_new_building':      'Looking for / moving to a new building',
             'expansion_adding_equipment':  'Adding equipment',
             'expansion_capex_planned':     'Capital expenditure planned',
             'expansion_notes':             'Expansion details',
-            'received_business_lead':      'I received a business lead or referral opportunity from this visit',
-            'follow_up_needed':            'Follow-up needed?',
-            'follow_up_notes':             'Follow-up Details',
+            'volunteer_helped':       'I helped this company during the visit',
+            'volunteer_helped_notes': 'How did you help?',
+            'received_business_lead': 'I received a business lead or referral from this visit',
+            'follow_up_needed':       'Follow-up needed?',
+            'follow_up_notes':        'Follow-up Details',
         }
 
 
