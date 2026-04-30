@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Roster – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+      <li class="breadcrumb-item active">Volunteer Roster</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Volunteer Roster</h4>
+    <span class="badge rounded-pill fs-6" style="background:var(--edawn-blue);">{{ total_count }} volunteers</span>
+  </div>
+</div>
+
+<!-- Filter tabs -->
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <span class="text-muted small me-1">Filter:</span>
+      <a href="?status=all"
+         class="btn btn-sm {% if status_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        All
+      </a>
+      <a href="?status=active"
+         class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        Active
+      </a>
+      <a href="?status=overdue"
+         class="btn btn-sm {% if status_filter == 'overdue' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+        Overdue
+      </a>
+      <a href="?status=unassigned"
+         class="btn btn-sm {% if status_filter == 'unassigned' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+        No Assignments
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Roster table -->
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Volunteer</th>
+          <th class="text-center">Active</th>
+          <th class="text-center">Completed</th>
+          <th class="text-center">Lost</th>
+          <th>Last Visit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vol in volunteers %}
+        {% with is_overdue=vol.active_count and vol.last_visit and vol.last_visit < cutoff_45 or vol.active_count and not vol.last_visit %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ vol.get_full_name|default:vol.username }}</div>
+            <div class="text-muted small">{{ vol.email }}</div>
+          </td>
+          <td class="text-center">
+            {% if vol.active_count %}
+            <span class="badge rounded-pill" style="background:var(--edawn-teal);">{{ vol.active_count }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if vol.completed_count %}
+            <span class="badge bg-success rounded-pill">{{ vol.completed_count }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if vol.lost_count %}
+            <span class="badge bg-danger rounded-pill">{{ vol.lost_count }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if vol.last_visit %}
+            <span class="small">{{ vol.last_visit|date:"M d, Y" }}</span>
+            <div class="text-muted" style="font-size:.75rem;">{{ vol.last_visit|timesince }} ago</div>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if vol.active_count %}
+              {% if vol.last_visit %}
+                {% if vol.last_visit < cutoff_45 %}
+                  <span class="badge bg-danger rounded-pill">Overdue</span>
+                {% else %}
+                  <span class="badge rounded-pill" style="background:var(--edawn-teal);">Active</span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-danger rounded-pill">Overdue</span>
+              {% endif %}
+            {% elif vol.completed_count %}
+              <span class="badge bg-secondary rounded-pill">No Active</span>
+            {% else %}
+              <span class="badge bg-light text-muted rounded-pill">Unassigned</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-5">
+            <i class="bi bi-people fs-2 d-block mb-2"></i>
+            No volunteers found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

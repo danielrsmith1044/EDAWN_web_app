@@ -176,8 +176,22 @@
       </a>
       {% if user.is_staff %}
       <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.2)">
-      <a href="{% url 'admin:index' %}" class="nav-link">
-        <i class="bi bi-shield-lock"></i> Admin
+      <div style="padding:.3rem 1.5rem .1rem; font-size:.7rem; font-weight:700; letter-spacing:.08em; color:rgba(255,255,255,.4); text-transform:uppercase;">Staff</div>
+      <a href="{% url 'staff_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Staff Dashboard
+      </a>
+      <a href="{% url 'staff_volunteers' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_volunteers' %}active{% endif %}">
+        <i class="bi bi-people"></i> Volunteer Roster
+      </a>
+      <a href="{% url 'staff_import_csv' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_import_csv' %}active{% endif %}">
+        <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
+      </a>
+      <a href="{% url 'staff_invite' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_invite' %}active{% endif %}">
+        <i class="bi bi-link-45deg"></i> Invite Volunteer
+      </a>
+      <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.1)">
+      <a href="{% url 'admin:index' %}" class="nav-link" style="opacity:.6; font-size:.85rem;">
+        <i class="bi bi-shield-lock"></i> Django Admin
       </a>
       {% endif %}
     </nav>

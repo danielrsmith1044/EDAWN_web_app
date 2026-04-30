@@ -6,7 +6,7 @@
 <div class="page-header">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb mb-1">
-      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
       <li class="breadcrumb-item active">Assign Company</li>
     </ol>
   </nav>
@@ -44,7 +44,7 @@
         {% else %}
         <div class="text-center py-4 text-muted">
           <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
-          All companies are assigned! <a href="{% url 'quick_add_company' %}">Add a new company</a> first.
+          All companies are assigned! <a href="{% url 'staff_add_company' %}">Add a new company</a> first.
         </div>
         {% endif %}
       </div>

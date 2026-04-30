@@ -1,14 +1,20 @@
+import csv
+import io
+from datetime import timedelta
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
+from django.utils import timezone
 
 from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
-                     MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm)
+                     MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
+                     CompanyCSVUploadForm)
 from .ratelimit import ratelimit
 
 
@@ -491,3 +497,157 @@ def message_create(request):
     else:
         form = MessageForm()
     return render(request, 'core/message_create.html', {'form': form})
+
+
+# ---------------------------------------------------------------------------
+# Staff Portal
+# ---------------------------------------------------------------------------
+
+_CSV_FIELD_MAP = {
+    'name': 'name', 'address': 'address', 'city': 'city', 'state': 'state',
+    'zip': 'zip_code', 'zip_code': 'zip_code', 'phone': 'phone',
+    'email': 'email', 'website': 'website', 'industry': 'industry',
+    'contact_name': 'primary_contact_name',
+    'primary_contact_name': 'primary_contact_name',
+    'contact_title': 'primary_contact_title',
+    'primary_contact_title': 'primary_contact_title',
+    'notes': 'notes',
+}
+
+
+@staff_member_required
+def staff_dashboard(request):
+    cutoff_60 = timezone.now() - timedelta(days=60)
+    cutoff_45 = timezone.now() - timedelta(days=45)
+
+    not_visited_60d = (
+        Assignment.objects
+        .filter(status=Assignment.STATUS_ACTIVE)
+        .annotate(last_visit=Max('visit_notes__visit_date'))
+        .filter(Q(last_visit__lt=cutoff_60) | Q(last_visit__isnull=True))
+        .count()
+    )
+
+    overdue_qs = (
+        User.objects
+        .filter(is_active=True, is_staff=False, assignments__status=Assignment.STATUS_ACTIVE)
+        .annotate(last_visit=Max('assignments__visit_notes__visit_date'))
+        .filter(Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True))
+        .distinct()
+        .order_by('first_name', 'last_name')
+    )
+
+    context = {
+        'total_companies':    Company.objects.count(),
+        'unassigned_count':   Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
+        'active_count':       Assignment.objects.filter(status=Assignment.STATUS_ACTIVE).count(),
+        'visited_count':      Company.objects.filter(status=Company.STATUS_VISITED).count(),
+        'total_volunteers':   User.objects.filter(is_active=True, is_staff=False).count(),
+        'not_visited_60d':    not_visited_60d,
+        'overdue_count':      overdue_qs.count(),
+        'overdue_volunteers': overdue_qs[:8],
+        'recent_assignments': (
+            Assignment.objects
+            .select_related('company', 'volunteer')
+            .order_by('-assigned_date')[:10]
+        ),
+    }
+    return render(request, 'core/staff_dashboard.html', context)
+
+
+@staff_member_required
+def staff_volunteers(request):
+    status_filter = request.GET.get('status', 'all')
+    cutoff_45 = timezone.now() - timedelta(days=45)
+
+    volunteers = (
+        User.objects
+        .filter(is_active=True, is_staff=False)
+        .annotate(
+            last_visit=Max('assignments__visit_notes__visit_date'),
+            active_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_ACTIVE),
+                distinct=True,
+            ),
+            completed_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
+                distinct=True,
+            ),
+            lost_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_LOST),
+                distinct=True,
+            ),
+        )
+        .order_by('first_name', 'last_name', 'username')
+    )
+
+    if status_filter == 'overdue':
+        volunteers = volunteers.filter(
+            active_count__gt=0
+        ).filter(Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True))
+    elif status_filter == 'active':
+        volunteers = volunteers.filter(active_count__gt=0)
+    elif status_filter == 'unassigned':
+        volunteers = volunteers.filter(active_count=0, completed_count=0, lost_count=0)
+
+    context = {
+        'volunteers':     volunteers,
+        'status_filter':  status_filter,
+        'cutoff_45':      cutoff_45,
+        'total_count':    User.objects.filter(is_active=True, is_staff=False).count(),
+    }
+    return render(request, 'core/staff_volunteers.html', context)
+
+
+@staff_member_required
+def staff_import_csv(request):
+    if request.method == 'POST':
+        form = CompanyCSVUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            overwrite = form.cleaned_data.get('overwrite_existing', False)
+            try:
+                decoded = request.FILES['csv_file'].read().decode('utf-8-sig')
+                reader  = csv.DictReader(io.StringIO(decoded))
+                created = updated = skipped = 0
+                row_errors = []
+
+                for i, row in enumerate(reader, start=2):
+                    name = row.get('name', '').strip()
+                    if not name:
+                        row_errors.append(f"Row {i}: skipped (no name)")
+                        skipped += 1
+                        continue
+                    data = {
+                        model_field: row.get(csv_col, '').strip()
+                        for csv_col, model_field in _CSV_FIELD_MAP.items()
+                        if row.get(csv_col, '').strip()
+                    }
+                    existing = Company.objects.filter(name__iexact=name).first()
+                    if existing:
+                        if overwrite:
+                            for field, val in data.items():
+                                setattr(existing, field, val)
+                            existing.save()
+                            updated += 1
+                        else:
+                            skipped += 1
+                    else:
+                        data['name'] = name
+                        Company.objects.create(**data)
+                        created += 1
+
+                summary = f"Import complete: {created} created, {updated} updated, {skipped} skipped."
+                if row_errors:
+                    summary += "  Errors: " + "; ".join(row_errors[:5])
+                messages.success(request, summary)
+                return redirect('staff_import_csv')
+            except Exception as exc:
+                messages.error(request, f"Import failed: {exc}")
+    else:
+        form = CompanyCSVUploadForm()
+
+    recent = Company.objects.order_by('-created_at')[:10]
+    return render(request, 'core/staff_import.html', {'form': form, 'recent': recent})

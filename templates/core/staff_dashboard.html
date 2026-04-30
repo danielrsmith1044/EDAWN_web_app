@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Dashboard – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-speedometer2 me-2"></i>Staff Dashboard</h4>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card h-100">
+      <div class="card-body text-center py-3">
+        <div class="fw-bold fs-3" style="color:var(--edawn-blue);">{{ total_companies }}</div>
+        <div class="text-muted small">Total Companies</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card h-100">
+      <div class="card-body text-center py-3">
+        <div class="fw-bold fs-3" style="color:var(--edawn-blue);">{{ unassigned_count }}</div>
+        <div class="text-muted small">Unassigned</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card h-100">
+      <div class="card-body text-center py-3">
+        <div class="fw-bold fs-3" style="color:var(--edawn-teal);">{{ active_count }}</div>
+        <div class="text-muted small">Active</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card h-100">
+      <div class="card-body text-center py-3">
+        <div class="fw-bold fs-3 text-success">{{ visited_count }}</div>
+        <div class="text-muted small">Visited</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card h-100 {% if not_visited_60d %}border-warning{% endif %}">
+      <div class="card-body text-center py-3">
+        <div class="fw-bold fs-3 {% if not_visited_60d %}text-warning{% else %}text-muted{% endif %}">{{ not_visited_60d }}</div>
+        <div class="text-muted small">Unvisited 60+ Days</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card h-100 {% if overdue_count %}border-danger{% endif %}">
+      <div class="card-body text-center py-3">
+        <div class="fw-bold fs-3 {% if overdue_count %}text-danger{% else %}text-muted{% endif %}">{{ overdue_count }}</div>
+        <div class="text-muted small">Overdue Volunteers</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header py-3"><i class="bi bi-lightning me-2"></i>Quick Actions</div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <a href="{% url 'staff_add_company' %}" class="btn btn-primary">
+          <i class="bi bi-building-add me-1"></i>Add Company
+        </a>
+        <a href="{% url 'staff_import_csv' %}" class="btn btn-outline-primary">
+          <i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV
+        </a>
+        <a href="{% url 'staff_assign' %}" class="btn btn-outline-primary">
+          <i class="bi bi-person-plus me-1"></i>Assign Company
+        </a>
+        <a href="{% url 'company_list' %}?status=unassigned" class="btn btn-outline-secondary">
+          <i class="bi bi-inbox me-1"></i>View Unassigned
+          {% if unassigned_count %}<span class="badge bg-warning text-dark ms-1">{{ unassigned_count }}</span>{% endif %}
+        </a>
+        <a href="{% url 'staff_invite' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-link-45deg me-1"></i>Invite Volunteer
+        </a>
+        <a href="{% url 'staff_create_admin' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-person-gear me-1"></i>Create Admin
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main content: recent assignments + overdue volunteers -->
+<div class="row g-4">
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>Recent Assignments</span>
+        <a href="{% url 'company_list' %}?status=active" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle small">
+          <thead class="table-light">
+            <tr>
+              <th>Company</th>
+              <th>Volunteer</th>
+              <th>Status</th>
+              <th class="text-muted" style="font-weight:400;">Assigned</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in recent_assignments %}
+            <tr>
+              <td>
+                <a href="{% url 'company_detail' a.pk %}" class="text-decoration-none fw-semibold">
+                  {{ a.company.name }}
+                </a>
+              </td>
+              <td class="text-muted">{{ a.volunteer.get_full_name|default:a.volunteer.username }}</td>
+              <td>
+                {% if a.status == 'active' %}
+                  <span class="badge rounded-pill" style="background:var(--edawn-teal);">Active</span>
+                {% elif a.status == 'completed' %}
+                  <span class="badge bg-success rounded-pill">Visited</span>
+                {% elif a.status == 'lost' %}
+                  <span class="badge bg-danger rounded-pill">Lost</span>
+                {% endif %}
+              </td>
+              <td class="text-muted">{{ a.assigned_date|timesince }} ago</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No assignments yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card {% if overdue_count %}border-danger{% endif %}">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center
+                  {% if overdue_count %}text-danger{% endif %}">
+        <span><i class="bi bi-exclamation-triangle me-2"></i>Overdue Volunteers</span>
+        <a href="{% url 'staff_volunteers' %}?status=overdue" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      {% if overdue_volunteers %}
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for vol in overdue_volunteers %}
+          <li class="list-group-item px-3 py-2">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold small">{{ vol.get_full_name|default:vol.username }}</div>
+                {% if vol.last_visit %}
+                <div class="text-muted" style="font-size:.75rem;">Last visit {{ vol.last_visit|timesince }} ago</div>
+                {% else %}
+                <div class="text-muted" style="font-size:.75rem;">No visits yet</div>
+                {% endif %}
+              </div>
+              <span class="badge bg-danger rounded-pill">Overdue</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-check-circle text-success fs-2 d-block mb-2"></i>
+        No overdue volunteers.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

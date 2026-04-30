@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Import Companies – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+      <li class="breadcrumb-item active">Import Companies</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Companies</h4>
+</div>
+
+<div class="row g-4">
+
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header py-3"><i class="bi bi-upload me-2"></i>Upload CSV</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">CSV File <span class="text-danger">*</span></label>
+            {{ form.csv_file }}
+            {% if form.csv_file.errors %}
+            <div class="text-danger small mt-1">{{ form.csv_file.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-4 p-3 rounded" style="background:var(--edawn-blue-light);">
+            <div class="form-check">
+              {{ form.overwrite_existing }}
+              <label class="form-check-label fw-semibold ms-1" for="{{ form.overwrite_existing.id_for_label }}">
+                {{ form.overwrite_existing.label }}
+              </label>
+            </div>
+            <div class="text-muted small mt-1 ms-4">{{ form.overwrite_existing.help_text }}</div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-cloud-upload me-1"></i>Import
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header py-3"><i class="bi bi-info-circle me-2"></i>CSV Format</div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">
+          Required column: <code>name</code>. All other columns are optional.
+        </p>
+        <table class="table table-sm small mb-0">
+          <thead class="table-light">
+            <tr><th>Column Name</th><th>Field</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>name</code></td><td>Company name <span class="text-danger">*</span></td></tr>
+            <tr><td><code>industry</code></td><td>Industry</td></tr>
+            <tr><td><code>address</code></td><td>Street address</td></tr>
+            <tr><td><code>city</code></td><td>City</td></tr>
+            <tr><td><code>state</code></td><td>State</td></tr>
+            <tr><td><code>zip_code</code> or <code>zip</code></td><td>ZIP code</td></tr>
+            <tr><td><code>phone</code></td><td>Phone</td></tr>
+            <tr><td><code>email</code></td><td>Email</td></tr>
+            <tr><td><code>website</code></td><td>Website URL</td></tr>
+            <tr><td><code>primary_contact_name</code> or <code>contact_name</code></td><td>Primary contact</td></tr>
+            <tr><td><code>primary_contact_title</code> or <code>contact_title</code></td><td>Contact title</td></tr>
+            <tr><td><code>notes</code></td><td>Internal notes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header py-3"><i class="bi bi-clock-history me-2"></i>Recently Added</div>
+      <div class="card-body p-0">
+        {% if recent %}
+        <ul class="list-group list-group-flush">
+          {% for co in recent %}
+          <li class="list-group-item py-2 px-3">
+            <div class="fw-semibold small">{{ co.name }}</div>
+            <div class="text-muted" style="font-size:.78rem;">
+              {{ co.industry|default:"—" }}
+              {% if co.city %}&middot; {{ co.city }}{% endif %}
+              &middot; <span class="badge bg-light text-muted" style="font-size:.7rem;">{{ co.get_status_display }}</span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center small py-3">No companies yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
