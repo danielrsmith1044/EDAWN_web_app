@@ -172,8 +172,8 @@ class VisitNote(models.Model):
     expansion_notes             = models.TextField(blank=True, verbose_name='Expansion details')
 
     # Volunteer helped the company
-    volunteer_helped       = models.BooleanField(default=False, verbose_name='I helped this company during the visit')
-    volunteer_helped_notes = models.TextField(blank=True, verbose_name='How did you help?')
+    volunteer_helped       = models.BooleanField(default=False, verbose_name='I assisted this company with a problem during this visit')
+    volunteer_helped_notes = models.TextField(blank=True, verbose_name='How did you assist?')
 
     # Volunteer business lead tracking (F-35)
     received_business_lead = models.BooleanField(default=False, verbose_name='Received a business lead or referral')
