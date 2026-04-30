@@ -73,17 +73,17 @@
 {% if user.is_staff %}
 <!-- Admin Quick Actions -->
 <div class="d-flex flex-wrap gap-2 mb-4">
-  <a href="{% url 'quick_add_company' %}" class="btn btn-outline-primary">
+  <a href="{% url 'staff_add_company' %}" class="btn btn-outline-primary">
     <i class="bi bi-building-add me-1"></i>Add Company
   </a>
-  <a href="{% url 'quick_assign' %}" class="btn btn-outline-primary">
+  <a href="{% url 'staff_assign' %}" class="btn btn-outline-primary">
     <i class="bi bi-person-plus me-1"></i>Assign Company
     {% if unassigned_count %}<span class="badge bg-danger ms-1">{{ unassigned_count }}</span>{% endif %}
   </a>
-  <a href="{% url 'quick_invite' %}" class="btn btn-outline-primary">
+  <a href="{% url 'staff_invite' %}" class="btn btn-outline-primary">
     <i class="bi bi-link-45deg me-1"></i>Invite Volunteer
   </a>
-  <a href="{% url 'create_admin' %}" class="btn btn-outline-primary">
+  <a href="{% url 'staff_create_admin' %}" class="btn btn-outline-primary">
     <i class="bi bi-person-gear me-1"></i>Create Admin
   </a>
   <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary">

@@ -198,7 +198,7 @@
           <td><small class="text-muted">{{ company.industry|default:"—" }}</small></td>
           <td><small class="text-muted">{{ company.primary_contact_name|default:"—" }}</small></td>
           <td class="text-end">
-            <a href="{% url 'quick_assign' %}?company={{ company.pk }}"
+            <a href="{% url 'staff_assign' %}?company={{ company.pk }}"
                class="btn btn-sm btn-outline-primary">
               <i class="bi bi-person-plus"></i> Assign
             </a>
