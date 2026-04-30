@@ -19,10 +19,11 @@ urlpatterns = [
     path('admin-actions/create-admin/', views.create_admin,      name='create_admin'),
 
     # Companies
-    path('companies/',                      views.company_list,         name='company_list'),
-    path('companies/<int:pk>/',             views.company_detail,       name='company_detail'),
-    path('companies/<int:pk>/contact/',     views.log_contact_attempt,  name='log_contact_attempt'),
-    path('companies/<int:pk>/visit/',       views.log_visit,            name='log_visit'),
+    path('companies/',                                        views.company_list,        name='company_list'),
+    path('companies/<int:pk>/',                               views.company_detail,      name='company_detail'),
+    path('companies/<int:pk>/contact/',                       views.log_contact_attempt, name='log_contact_attempt'),
+    path('companies/<int:pk>/visit/',                         views.log_visit,           name='log_visit'),
+    path('companies/<int:pk>/visit/<int:note_pk>/edit/',      views.edit_visit_note,     name='edit_visit_note'),
 
     # Badges
     path('badges/', views.badge_list, name='badge_list'),

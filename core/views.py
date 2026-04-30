@@ -191,43 +191,78 @@ def quick_invite(request):
 
 @login_required
 def company_list(request):
-    status_filter   = request.GET.get('status', 'active')
-    industry_filter = request.GET.get('industry', '')
+    status_filter    = request.GET.get('status', 'active')
+    industry_filter  = request.GET.get('industry', '')
+    volunteer_filter = request.GET.get('volunteer', '') if request.user.is_staff else ''
 
-    assignments = Assignment.objects.filter(volunteer=request.user).select_related('company')
+    if request.user.is_staff:
+        base_qs = Assignment.objects.all().select_related('company', 'volunteer')
+    else:
+        base_qs = Assignment.objects.filter(volunteer=request.user).select_related('company')
 
-    if status_filter == 'active':
-        assignments = assignments.filter(status=Assignment.STATUS_ACTIVE)
-    elif status_filter == 'completed':
-        assignments = assignments.filter(status=Assignment.STATUS_COMPLETED)
-    elif status_filter == 'lost':
-        assignments = assignments.filter(status=Assignment.STATUS_LOST)
-    # 'all' returns everything
+    # Filter out unassigned-only view before applying status filter
+    if status_filter == 'unassigned':
+        assignments = Assignment.objects.none()
+    else:
+        assignments = base_qs
+        if status_filter == 'active':
+            assignments = assignments.filter(status=Assignment.STATUS_ACTIVE)
+        elif status_filter == 'completed':
+            assignments = assignments.filter(status=Assignment.STATUS_COMPLETED)
+        elif status_filter == 'lost':
+            assignments = assignments.filter(status=Assignment.STATUS_LOST)
 
     if industry_filter:
         assignments = assignments.filter(company__industry=industry_filter)
 
-    # Distinct industries from this volunteer's assignments for the filter dropdown
-    industries = (
-        Assignment.objects.filter(volunteer=request.user)
-        .exclude(company__industry='')
-        .values_list('company__industry', flat=True)
-        .distinct()
-        .order_by('company__industry')
-    )
+    if volunteer_filter and request.user.is_staff:
+        assignments = assignments.filter(volunteer__id=volunteer_filter)
+
+    # Unassigned companies — staff only, shown for 'all' and 'unassigned' filters
+    unassigned_companies = None
+    if request.user.is_staff and status_filter in ('all', 'unassigned'):
+        uq = Company.objects.filter(status=Company.STATUS_UNASSIGNED)
+        if industry_filter:
+            uq = uq.filter(industry=industry_filter)
+        unassigned_companies = uq.order_by('name')
+
+    # Industry options
+    if request.user.is_staff:
+        industries = (
+            Company.objects.exclude(industry='')
+            .values_list('industry', flat=True)
+            .distinct().order_by('industry')
+        )
+        volunteers = User.objects.filter(is_active=True, is_staff=False).order_by('first_name', 'last_name')
+    else:
+        industries = (
+            Assignment.objects.filter(volunteer=request.user)
+            .exclude(company__industry='')
+            .values_list('company__industry', flat=True)
+            .distinct().order_by('company__industry')
+        )
+        volunteers = None
 
     context = {
-        'assignments':     assignments.order_by('company__name'),
-        'status_filter':   status_filter,
-        'industry_filter': industry_filter,
-        'industries':      industries,
+        'assignments':          assignments.order_by('company__name'),
+        'unassigned_companies': unassigned_companies,
+        'status_filter':        status_filter,
+        'industry_filter':      industry_filter,
+        'volunteer_filter':     volunteer_filter,
+        'industries':           industries,
+        'volunteers':           volunteers,
     }
     return render(request, 'core/company_list.html', context)
 
 
 @login_required
 def company_detail(request, pk):
-    assignment       = get_object_or_404(Assignment, pk=pk, volunteer=request.user)
+    # Staff can view any assignment; volunteers only their own
+    if request.user.is_staff:
+        assignment = get_object_or_404(Assignment, pk=pk)
+    else:
+        assignment = get_object_or_404(Assignment, pk=pk, volunteer=request.user)
+
     contact_attempts = assignment.contact_attempts.all()
     visit_notes      = assignment.visit_notes.all()
 
@@ -238,6 +273,7 @@ def company_detail(request, pk):
         'visit_notes':        visit_notes,
         'contact_form':       ContactAttemptForm(),
         'attempts_remaining': max(0, 3 - contact_attempts.count()),
+        'is_owner':           request.user == assignment.volunteer,
     }
     return render(request, 'core/company_detail.html', context)
 
@@ -300,6 +336,44 @@ def log_visit(request, pk):
         'company':      company,
         'form':         form,
         'contact_form': contact_form,
+    })
+
+
+@login_required
+def edit_visit_note(request, pk, note_pk):
+    # Staff can edit any note; volunteers only their own
+    if request.user.is_staff:
+        assignment = get_object_or_404(Assignment, pk=pk)
+    else:
+        assignment = get_object_or_404(Assignment, pk=pk, volunteer=request.user)
+
+    note = get_object_or_404(VisitNote, pk=note_pk, assignment=assignment)
+
+    if not request.user.is_staff and note.visited_by != request.user:
+        messages.error(request, "You can only edit your own visit notes.")
+        return redirect('company_detail', pk=pk)
+
+    company = assignment.company
+
+    if request.method == 'POST':
+        form         = VisitNoteForm(request.POST, instance=note)
+        contact_form = CompanyContactUpdateForm(request.POST, instance=company, prefix='contact')
+        if form.is_valid() and contact_form.is_valid():
+            contact_form.save()
+            form.save()
+            messages.success(request, "Visit note updated.")
+            return redirect('company_detail', pk=pk)
+    else:
+        form         = VisitNoteForm(instance=note)
+        contact_form = CompanyContactUpdateForm(instance=company, prefix='contact')
+
+    return render(request, 'core/log_visit.html', {
+        'assignment':   assignment,
+        'company':      company,
+        'form':         form,
+        'contact_form': contact_form,
+        'editing':      True,
+        'note':         note,
     })
 
 

@@ -86,7 +86,7 @@
       </div>
     </div>
 
-    {% if assignment.is_active %}
+    {% if assignment.is_active and is_owner %}
     <!-- Actions -->
     <div class="card mb-4">
       <div class="card-header py-3"><i class="bi bi-lightning me-2"></i>Actions</div>
@@ -178,7 +178,15 @@
               <span class="text-muted fw-normal">· spoke with {{ note.contact_name }}</span>
               {% endif %}
             </span>
-            <span class="text-muted small">{{ note.visit_date|date:"M d, Y" }}</span>
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted small">{{ note.visit_date|date:"M d, Y" }}</span>
+              {% if request.user == note.visited_by or request.user.is_staff %}
+              <a href="{% url 'edit_visit_note' assignment.pk note.pk %}"
+                 class="btn btn-sm btn-outline-secondary py-0 px-2">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% endif %}
+            </div>
           </div>
 
           <!-- Notes -->

@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}My Companies – EDAWN{% endblock %}
+{% block title %}{% if request.user.is_staff %}All Companies{% else %}My Companies{% endif %} – EDAWN{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h4 class="mb-0 fw-bold"><i class="bi bi-building me-2"></i>My Assigned Companies</h4>
+  <h4 class="mb-0 fw-bold">
+    <i class="bi bi-building me-2"></i>
+    {% if request.user.is_staff %}All Companies{% else %}My Assigned Companies{% endif %}
+  </h4>
 </div>
 
 <!-- Filter bar -->
@@ -15,38 +18,64 @@
       <!-- Status filter -->
       <div class="d-flex gap-2 flex-wrap align-items-center">
         <span class="text-muted small me-1">Status:</span>
-        <a href="?status=active{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+        <a href="?status=active{% if industry_filter %}&industry={{ industry_filter }}{% endif %}{% if volunteer_filter %}&volunteer={{ volunteer_filter }}{% endif %}"
            class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
           Active
         </a>
-        <a href="?status=completed{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+        <a href="?status=completed{% if industry_filter %}&industry={{ industry_filter }}{% endif %}{% if volunteer_filter %}&volunteer={{ volunteer_filter }}{% endif %}"
            class="btn btn-sm {% if status_filter == 'completed' %}btn-success{% else %}btn-outline-secondary{% endif %}">
           Visited
         </a>
-        <a href="?status=lost{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+        <a href="?status=lost{% if industry_filter %}&industry={{ industry_filter }}{% endif %}{% if volunteer_filter %}&volunteer={{ volunteer_filter }}{% endif %}"
            class="btn btn-sm {% if status_filter == 'lost' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
           Lost
         </a>
-        <a href="?status=all{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+        {% if request.user.is_staff %}
+        <a href="?status=unassigned{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+           class="btn btn-sm {% if status_filter == 'unassigned' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+          Unassigned
+        </a>
+        {% endif %}
+        <a href="?status=all{% if industry_filter %}&industry={{ industry_filter }}{% endif %}{% if volunteer_filter %}&volunteer={{ volunteer_filter }}{% endif %}"
            class="btn btn-sm {% if status_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
           All
         </a>
       </div>
 
-      <!-- Industry filter (only shown when volunteer has multiple industries) -->
-      {% if industries %}
-      <div class="d-flex gap-2 align-items-center ms-auto">
-        <span class="text-muted small">Industry:</span>
+      <!-- Industry + Volunteer filters -->
+      {% if industries or volunteers %}
+      <div class="d-flex gap-2 flex-wrap align-items-center ms-auto">
+
+        {% if industries %}
         <form method="get" class="d-inline">
           <input type="hidden" name="status" value="{{ status_filter }}">
-          <select name="industry" class="form-select form-select-sm"
-                  style="min-width:160px;" onchange="this.form.submit()">
+          {% if volunteer_filter %}<input type="hidden" name="volunteer" value="{{ volunteer_filter }}">{% endif %}
+          <select name="industry" class="form-select form-select-sm" style="min-width:160px;"
+                  onchange="this.form.submit()">
             <option value="">All industries</option>
             {% for ind in industries %}
             <option value="{{ ind }}" {% if industry_filter == ind %}selected{% endif %}>{{ ind }}</option>
             {% endfor %}
           </select>
         </form>
+        {% endif %}
+
+        {% if volunteers %}
+        <form method="get" class="d-inline">
+          <input type="hidden" name="status" value="{{ status_filter }}">
+          {% if industry_filter %}<input type="hidden" name="industry" value="{{ industry_filter }}">{% endif %}
+          <select name="volunteer" class="form-select form-select-sm" style="min-width:180px;"
+                  onchange="this.form.submit()">
+            <option value="">All volunteers</option>
+            {% for vol in volunteers %}
+            <option value="{{ vol.pk }}" {% if volunteer_filter == vol.pk|stringformat:"s" %}selected{% endif %}>
+              {{ vol.get_full_name|default:vol.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+
       </div>
       {% endif %}
 
@@ -54,8 +83,9 @@
   </div>
 </div>
 
+<!-- Assigned companies table -->
 {% if assignments %}
-<div class="card">
+<div class="card {% if unassigned_companies %}mb-4{% endif %}">
   <div class="card-body p-0">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light">
@@ -63,6 +93,7 @@
           <th>Company</th>
           <th>Location</th>
           <th>Industry</th>
+          {% if request.user.is_staff %}<th>Volunteer</th>{% endif %}
           <th class="text-center">Attempts</th>
           <th>Status</th>
           <th></th>
@@ -88,13 +119,17 @@
             </small>
             {% if assignment.company.maps_url %}
             <a href="{{ assignment.company.maps_url }}" target="_blank" rel="noopener"
-               class="ms-1 text-decoration-none" style="color:var(--edawn-teal);"
-               title="Open in Google Maps">
+               class="ms-1 text-decoration-none" style="color:var(--edawn-teal);" title="Open in Google Maps">
               <i class="bi bi-map"></i>
             </a>
             {% endif %}
           </td>
           <td><small class="text-muted">{{ assignment.company.industry|default:"—" }}</small></td>
+          {% if request.user.is_staff %}
+          <td>
+            <small>{{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</small>
+          </td>
+          {% endif %}
           <td class="text-center">
             <span class="badge rounded-pill
               {% if assignment.contact_attempt_count >= 3 %}bg-danger
@@ -123,12 +158,63 @@
     </table>
   </div>
 </div>
-{% else %}
-<div class="card">
+{% elif status_filter != 'unassigned' %}
+<div class="card {% if unassigned_companies %}mb-4{% endif %}">
   <div class="card-body text-center py-5 text-muted">
     <i class="bi bi-building fs-2 d-block mb-2"></i>
     No companies found{% if status_filter != 'all' %} with this status{% endif %}.
   </div>
 </div>
 {% endif %}
+
+<!-- Unassigned companies (staff only) -->
+{% if unassigned_companies is not None %}
+<div class="card">
+  <div class="card-header py-3">
+    <i class="bi bi-inbox me-2"></i>Unassigned Companies
+    <span class="badge bg-warning text-dark ms-2">{{ unassigned_companies.count }}</span>
+  </div>
+  {% if unassigned_companies %}
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Company</th>
+          <th>Location</th>
+          <th>Industry</th>
+          <th>Contact</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for company in unassigned_companies %}
+        <tr>
+          <td class="fw-semibold">{{ company.name }}</td>
+          <td>
+            <small class="text-muted">
+              {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% else %}—{% endif %}
+            </small>
+          </td>
+          <td><small class="text-muted">{{ company.industry|default:"—" }}</small></td>
+          <td><small class="text-muted">{{ company.primary_contact_name|default:"—" }}</small></td>
+          <td class="text-end">
+            <a href="{% url 'quick_assign' %}?company={{ company.pk }}"
+               class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-person-plus"></i> Assign
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-4 text-muted">
+    <i class="bi bi-check-circle fs-2 d-block mb-2"></i>
+    All companies are assigned.
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 {% endblock %}

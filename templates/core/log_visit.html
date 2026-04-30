@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Log Visit – {{ company.name }} – EDAWN{% endblock %}
+{% block title %}{% if editing %}Edit Visit Note{% else %}Log Visit{% endif %} – {{ company.name }} – EDAWN{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -8,10 +8,10 @@
     <ol class="breadcrumb mb-1">
       <li class="breadcrumb-item"><a href="{% url 'company_list' %}">My Companies</a></li>
       <li class="breadcrumb-item"><a href="{% url 'company_detail' assignment.pk %}">{{ company.name }}</a></li>
-      <li class="breadcrumb-item active">Log Visit</li>
+      <li class="breadcrumb-item active">{% if editing %}Edit Visit Note{% else %}Log Visit{% endif %}</li>
     </ol>
   </nav>
-  <h4 class="mb-0 fw-bold">Log Visit: {{ company.name }}</h4>
+  <h4 class="mb-0 fw-bold">{% if editing %}Edit Visit Note{% else %}Log Visit{% endif %}: {{ company.name }}</h4>
 </div>
 
 <div class="row justify-content-center">
@@ -313,7 +313,7 @@
 
       <div class="d-flex gap-2 mb-5">
         <button type="submit" class="btn btn-primary px-4">
-          <i class="bi bi-check-circle me-1"></i> Save Visit
+          <i class="bi bi-check-circle me-1"></i> {% if editing %}Save Changes{% else %}Save Visit{% endif %}
         </button>
         <a href="{% url 'company_detail' assignment.pk %}" class="btn btn-outline-secondary">
           Cancel
