@@ -1,12 +1,16 @@
 import csv
 import io
+from datetime import timedelta
 
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
+from django.db.models import Count, Max, Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
+from django.utils import timezone
+from django.utils.html import format_html
 
 from .forms import CompanyCSVUploadForm
 from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, UserBadge, VisitNote
@@ -27,17 +31,42 @@ _original_index = admin.AdminSite.index
 
 def _custom_index(self, request, extra_context=None):
     extra_context = extra_context or {}
+
+    cutoff_60 = timezone.now() - timedelta(days=60)
+    cutoff_45 = timezone.now() - timedelta(days=45)
+
+    # Active assignments with no visit in 60+ days (includes never-visited)
+    not_visited_60d = (
+        Assignment.objects
+        .filter(status=Assignment.STATUS_ACTIVE)
+        .annotate(last_visit=Max('visit_notes__visit_date'))
+        .filter(Q(last_visit__lt=cutoff_60) | Q(last_visit__isnull=True))
+        .count()
+    )
+
+    # Volunteers with active assignments but no visit in 45+ days
+    overdue_volunteers = (
+        User.objects
+        .filter(is_active=True, is_staff=False, assignments__status=Assignment.STATUS_ACTIVE)
+        .annotate(last_visit=Max('assignments__visit_notes__visit_date'))
+        .filter(Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True))
+        .distinct()
+        .count()
+    )
+
     extra_context.update({
-        'total_companies':    Company.objects.count(),
-        'unassigned_count':   Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
-        'active_assignments': Assignment.objects.filter(status=Assignment.STATUS_ACTIVE).count(),
-        'total_visited':      Company.objects.filter(status=Company.STATUS_VISITED).count(),
-        'total_volunteers':   User.objects.filter(is_active=True, is_staff=False).count(),
-        'recent_assignments': (
+        'total_companies':      Company.objects.count(),
+        'unassigned_count':     Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
+        'active_assignments':   Assignment.objects.filter(status=Assignment.STATUS_ACTIVE).count(),
+        'total_visited':        Company.objects.filter(status=Company.STATUS_VISITED).count(),
+        'total_volunteers':     User.objects.filter(is_active=True, is_staff=False).count(),
+        'not_visited_60d':      not_visited_60d,
+        'overdue_volunteers':   overdue_volunteers,
+        'recent_assignments':   (
             Assignment.objects.select_related('company', 'volunteer')
             .order_by('-assigned_date')[:8]
         ),
-        'recent_companies':   Company.objects.order_by('-created_at')[:8],
+        'recent_companies':     Company.objects.order_by('-created_at')[:8],
     })
     return _original_index(self, request, extra_context=extra_context)
 
@@ -53,6 +82,50 @@ admin.site.unregister(User)
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'first_name', 'last_name', 'email')
+    list_display  = ('username', 'first_name', 'last_name', 'email',
+                     'is_active', 'last_login', 'last_visit_col', 'visit_count_col', 'inactivity_flag_col')
+    list_filter   = UserAdmin.list_filter + ('last_login',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            _last_visit=Max('assignments__visit_notes__visit_date'),
+            _visit_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
+                distinct=True,
+            ),
+            _active_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_ACTIVE),
+                distinct=True,
+            ),
+        )
+
+    @admin.display(description='Last Visit', ordering='_last_visit')
+    def last_visit_col(self, obj):
+        if obj._last_visit:
+            return obj._last_visit.strftime('%b %d, %Y')
+        return '—'
+
+    @admin.display(description='Visits', ordering='_visit_count')
+    def visit_count_col(self, obj):
+        return obj._visit_count
+
+    @admin.display(description='Status')
+    def inactivity_flag_col(self, obj):
+        if obj.is_staff:
+            return '—'
+        cutoff = timezone.now() - timedelta(days=45)
+        overdue = (
+            obj._active_count > 0
+            and (obj._last_visit is None or obj._last_visit < cutoff)
+        )
+        if overdue:
+            return format_html('<span style="color:#dc3545; font-weight:600;">⚠ Overdue</span>')
+        if obj._active_count > 0:
+            return format_html('<span style="color:#198754;">Active</span>')
+        return '—'
 
 
 # ---------------------------------------------------------------------------

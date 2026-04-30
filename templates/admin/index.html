@@ -24,6 +24,8 @@
   }
   .stat-card .number { font-size: 28px; font-weight: 700; color: #014684; }
   .stat-card .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-card.warn { border-top-color: #dc3545; }
+  .stat-card.warn .number { color: #dc3545; }
 
   .section-heading { font-size: 16px; font-weight: 600; color: #014684; margin-bottom: 12px; border-bottom: 2px solid #008b99; padding-bottom: 6px; }
 
@@ -103,6 +105,14 @@
     <div class="stat-card">
       <div class="number">{{ total_volunteers }}</div>
       <div class="stat-label">Volunteers</div>
+    </div>
+    <div class="stat-card {% if not_visited_60d %}warn{% endif %}">
+      <div class="number">{{ not_visited_60d }}</div>
+      <div class="stat-label">Unvisited 60+ Days</div>
+    </div>
+    <div class="stat-card {% if overdue_volunteers %}warn{% endif %}">
+      <div class="number">{{ overdue_volunteers }}</div>
+      <div class="stat-label">Overdue Volunteers</div>
     </div>
   </div>
 
