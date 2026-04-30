@@ -123,12 +123,46 @@ class ContactAttempt(models.Model):
 
 
 class VisitNote(models.Model):
+    HIRING_STATUS_CHOICES = [
+        ('hiring',  'Actively Hiring'),
+        ('layoffs', 'Layoffs Occurring'),
+        ('stable',  'Stable / No Change'),
+        ('unknown', 'Unknown'),
+    ]
+    AT_CAPACITY_CHOICES = [
+        ('',    'Unknown'),
+        ('yes', 'Yes — at capacity'),
+        ('no',  'No — room to grow'),
+    ]
+
     assignment       = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='visit_notes')
     visited_by       = models.ForeignKey(User, on_delete=models.CASCADE)
     visit_date       = models.DateTimeField(auto_now_add=True)
-    notes            = models.TextField()
-    follow_up_needed = models.BooleanField(default=False)
-    follow_up_notes  = models.TextField(blank=True)
+
+    # Who was spoken to
+    contact_name = models.CharField(max_length=100, blank=True, verbose_name='Contact spoken to')
+
+    # Additional contact captured during visit
+    additional_contact_name  = models.CharField(max_length=100, blank=True)
+    additional_contact_title = models.CharField(max_length=100, blank=True)
+    additional_contact_phone = models.CharField(max_length=50,  blank=True)
+    additional_contact_email = models.EmailField(blank=True)
+
+    # General visit notes
+    notes = models.TextField()
+
+    # Workforce data (F-10/F-11)
+    hiring_status       = models.CharField(max_length=10, choices=HIRING_STATUS_CHOICES, blank=True,
+                                           verbose_name='Hiring / layoff status')
+    employee_count      = models.PositiveIntegerField(null=True, blank=True, verbose_name='Current employees')
+    jobs_added_expected = models.PositiveIntegerField(null=True, blank=True, verbose_name='Expected jobs to be added')
+    jobs_added_last_year = models.PositiveIntegerField(null=True, blank=True, verbose_name='Jobs added last year')
+    jobs_lost_last_year  = models.PositiveIntegerField(null=True, blank=True, verbose_name='Jobs lost last year')
+
+    # Facility
+    building_size_sqft = models.PositiveIntegerField(null=True, blank=True, verbose_name='Current building size (sq ft)')
+    at_capacity        = models.CharField(max_length=3, choices=AT_CAPACITY_CHOICES, blank=True,
+                                          verbose_name='At capacity?')
 
     # Expansion opportunity flags (F-32)
     expansion_adding_sq_footage = models.BooleanField(default=False, verbose_name='Adding square footage')
@@ -137,8 +171,16 @@ class VisitNote(models.Model):
     expansion_capex_planned     = models.BooleanField(default=False, verbose_name='Capital expenditure planned')
     expansion_notes             = models.TextField(blank=True, verbose_name='Expansion details')
 
+    # Volunteer helped the company
+    volunteer_helped       = models.BooleanField(default=False, verbose_name='I helped this company during the visit')
+    volunteer_helped_notes = models.TextField(blank=True, verbose_name='How did you help?')
+
     # Volunteer business lead tracking (F-35)
     received_business_lead = models.BooleanField(default=False, verbose_name='Received a business lead or referral')
+
+    # Follow-up
+    follow_up_needed = models.BooleanField(default=False)
+    follow_up_notes  = models.TextField(blank=True)
 
     class Meta:
         ordering = ['-visit_date']

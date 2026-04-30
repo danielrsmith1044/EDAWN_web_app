@@ -126,9 +126,17 @@ class VisitNoteInline(admin.TabularInline):
     model           = VisitNote
     extra           = 0
     readonly_fields = (
-        'visited_by', 'visit_date', 'notes',
+        'visited_by', 'visit_date',
+        'contact_name',
+        'additional_contact_name', 'additional_contact_title',
+        'additional_contact_phone', 'additional_contact_email',
+        'notes',
+        'hiring_status', 'employee_count',
+        'jobs_added_last_year', 'jobs_lost_last_year', 'jobs_added_expected',
+        'building_size_sqft', 'at_capacity',
         'expansion_adding_sq_footage', 'expansion_new_building',
         'expansion_adding_equipment', 'expansion_capex_planned', 'expansion_notes',
+        'volunteer_helped', 'volunteer_helped_notes',
         'received_business_lead',
         'follow_up_needed', 'follow_up_notes',
     )

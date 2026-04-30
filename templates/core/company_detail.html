@@ -169,30 +169,74 @@
       <div class="card-body">
         {% for note in visit_notes %}
         <div class="{% if not forloop.last %}mb-4 pb-4 border-bottom{% endif %}">
+
+          <!-- Header: who visited and when -->
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="fw-semibold small">
               {{ note.visited_by.get_full_name|default:note.visited_by.username }}
+              {% if note.contact_name %}
+              <span class="text-muted fw-normal">· spoke with {{ note.contact_name }}</span>
+              {% endif %}
             </span>
-            <span class="text-muted small">{{ note.visit_date|date:"M d, Y g:i A" }}</span>
+            <span class="text-muted small">{{ note.visit_date|date:"M d, Y" }}</span>
           </div>
-          <p class="mb-2">{{ note.notes }}</p>
 
+          <!-- Notes -->
+          <p class="mb-3">{{ note.notes }}</p>
+
+          <!-- Workforce summary -->
+          {% if note.hiring_status or note.employee_count %}
+          <div class="mb-2 d-flex flex-wrap gap-3 small">
+            {% if note.hiring_status %}
+            <span>
+              <i class="bi bi-people me-1 text-muted"></i>
+              <strong>{{ note.get_hiring_status_display }}</strong>
+            </span>
+            {% endif %}
+            {% if note.employee_count %}
+            <span class="text-muted">{{ note.employee_count }} employees</span>
+            {% endif %}
+            {% if note.jobs_added_last_year %}
+            <span class="text-success">+{{ note.jobs_added_last_year }} added last year</span>
+            {% endif %}
+            {% if note.jobs_lost_last_year %}
+            <span class="text-danger">-{{ note.jobs_lost_last_year }} lost last year</span>
+            {% endif %}
+            {% if note.jobs_added_expected %}
+            <span class="text-muted">{{ note.jobs_added_expected }} expected to add</span>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Facility -->
+          {% if note.building_size_sqft or note.at_capacity %}
+          <div class="mb-2 small text-muted">
+            <i class="bi bi-building me-1"></i>
+            {% if note.building_size_sqft %}{{ note.building_size_sqft|floatformat:"0"}} sq ft{% endif %}
+            {% if note.at_capacity == 'yes' %}<span class="text-warning ms-2">· At capacity</span>{% endif %}
+            {% if note.at_capacity == 'no' %}<span class="text-success ms-2">· Room to grow</span>{% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Additional contact -->
+          {% if note.additional_contact_name %}
+          <div class="mb-2 small text-muted">
+            <i class="bi bi-person-plus me-1"></i>
+            Additional contact: <strong>{{ note.additional_contact_name }}</strong>
+            {% if note.additional_contact_title %}, {{ note.additional_contact_title }}{% endif %}
+            {% if note.additional_contact_phone %} · {{ note.additional_contact_phone }}{% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Expansion flags -->
           {% if note.expansion_adding_sq_footage or note.expansion_new_building or note.expansion_adding_equipment or note.expansion_capex_planned %}
           <div class="mb-2">
             <div class="d-flex flex-wrap gap-1 align-items-center">
               <span class="text-muted small me-1"><i class="bi bi-graph-up-arrow"></i> Expansion:</span>
-              {% if note.expansion_adding_sq_footage %}
-              <span class="badge rounded-pill bg-info text-dark small">Adding SF</span>
-              {% endif %}
-              {% if note.expansion_new_building %}
-              <span class="badge rounded-pill bg-info text-dark small">New Building</span>
-              {% endif %}
-              {% if note.expansion_adding_equipment %}
-              <span class="badge rounded-pill bg-info text-dark small">Adding Equipment</span>
-              {% endif %}
-              {% if note.expansion_capex_planned %}
-              <span class="badge rounded-pill bg-info text-dark small">CapEx Planned</span>
-              {% endif %}
+              {% if note.expansion_adding_sq_footage %}<span class="badge rounded-pill bg-info text-dark small">Adding SF</span>{% endif %}
+              {% if note.expansion_new_building %}<span class="badge rounded-pill bg-info text-dark small">New Building</span>{% endif %}
+              {% if note.expansion_adding_equipment %}<span class="badge rounded-pill bg-info text-dark small">Adding Equipment</span>{% endif %}
+              {% if note.expansion_capex_planned %}<span class="badge rounded-pill bg-info text-dark small">CapEx Planned</span>{% endif %}
             </div>
             {% if note.expansion_notes %}
             <div class="text-muted small mt-1 ms-1">{{ note.expansion_notes }}</div>
@@ -200,6 +244,19 @@
           </div>
           {% endif %}
 
+          <!-- Volunteer helped -->
+          {% if note.volunteer_helped %}
+          <div class="mb-2">
+            <span class="badge rounded-pill small" style="background:var(--edawn-teal);">
+              <i class="bi bi-stars me-1"></i>Volunteer helped
+            </span>
+            {% if note.volunteer_helped_notes %}
+            <div class="text-muted small mt-1 ms-1">{{ note.volunteer_helped_notes }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Business lead -->
           {% if note.received_business_lead %}
           <div class="mb-2">
             <span class="badge rounded-pill bg-success small">
@@ -208,6 +265,7 @@
           </div>
           {% endif %}
 
+          <!-- Follow-up -->
           {% if note.follow_up_needed %}
           <div class="alert alert-warning py-2 px-3 mb-0 small">
             <i class="bi bi-flag-fill me-1"></i>
@@ -215,6 +273,7 @@
             {{ note.follow_up_notes|default:"(no details provided)" }}
           </div>
           {% endif %}
+
         </div>
         {% endfor %}
       </div>

@@ -19,73 +19,263 @@
     <form method="post">
       {% csrf_token %}
 
-      <!-- Visit Notes -->
+      {% if form.non_field_errors or contact_form.non_field_errors %}
+      <div class="alert alert-danger">Please correct the errors below.</div>
+      {% endif %}
+
+      <!-- ================================================================
+           SECTION 1: Contact Information
+           ================================================================ -->
       <div class="card mb-4">
         <div class="card-header py-3">
-          <i class="bi bi-journal-plus me-2"></i>Visit Notes
+          <i class="bi bi-person-lines-fill me-2"></i>Contact Information
         </div>
         <div class="card-body">
+
+          <p class="text-muted small mb-3">
+            Confirm or update the company's primary contact below, then note who you actually spoke with.
+          </p>
+
+          <!-- Company contact fields (saved back to Company record) -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold">{{ contact_form.primary_contact_name.label }}</label>
+              {{ contact_form.primary_contact_name }}
+              {% if contact_form.primary_contact_name.errors %}
+              <div class="text-danger small">{{ contact_form.primary_contact_name.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold">{{ contact_form.primary_contact_title.label }}</label>
+              {{ contact_form.primary_contact_title }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold">{{ contact_form.phone.label }}</label>
+              {{ contact_form.phone }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold">{{ contact_form.email.label }}</label>
+              {{ contact_form.email }}
+              {% if contact_form.email.errors %}
+              <div class="text-danger small">{{ contact_form.email.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Who was spoken to on this specific visit -->
           <div class="mb-3">
-            <label class="form-label fw-semibold">
-              What did you find out during the visit?
-              <span class="text-danger">*</span>
+            <label class="form-label small fw-semibold" for="{{ form.contact_name.id_for_label }}">
+              {{ form.contact_name.label }}
             </label>
-            {{ form.notes }}
-            {% if form.notes.errors %}
-            <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
-            {% endif %}
+            {{ form.contact_name }}
+            <div class="form-text">May differ from the primary contact above.</div>
+          </div>
+
+          <!-- Additional contact toggle -->
+          <div class="mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="addContactBtn">
+              <i class="bi bi-person-plus me-1"></i> Add Additional Contact
+            </button>
+          </div>
+
+          <div id="additionalContactSection" style="display:none;">
+            <div class="border rounded p-3 bg-light mt-2">
+              <p class="small text-muted mb-3">Capture a second contact you met during this visit.</p>
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold">{{ form.additional_contact_name.label }}</label>
+                  {{ form.additional_contact_name }}
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold">{{ form.additional_contact_title.label }}</label>
+                  {{ form.additional_contact_title }}
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold">{{ form.additional_contact_phone.label }}</label>
+                  {{ form.additional_contact_phone }}
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small fw-semibold">{{ form.additional_contact_email.label }}</label>
+                  {{ form.additional_contact_email }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SECTION 2: Visit Notes
+           ================================================================ -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-journal-text me-2"></i>Visit Notes
+          <span class="text-danger ms-1">*</span>
+        </div>
+        <div class="card-body">
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SECTION 3: Workforce
+           ================================================================ -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-people me-2"></i>Workforce
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="{{ form.hiring_status.id_for_label }}">
+                {{ form.hiring_status.label }}
+                <span class="text-danger">*</span>
+              </label>
+              {{ form.hiring_status }}
+              {% if form.hiring_status.errors %}
+              <div class="text-danger small mt-1">{{ form.hiring_status.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-sm-6 col-lg-4">
+              <label class="form-label small fw-semibold" for="{{ form.employee_count.id_for_label }}">
+                {{ form.employee_count.label }}
+              </label>
+              {{ form.employee_count }}
+            </div>
+
+            <div class="col-sm-6 col-lg-4">
+              <label class="form-label small fw-semibold" for="{{ form.jobs_added_last_year.id_for_label }}">
+                {{ form.jobs_added_last_year.label }}
+              </label>
+              {{ form.jobs_added_last_year }}
+            </div>
+
+            <div class="col-sm-6 col-lg-4">
+              <label class="form-label small fw-semibold" for="{{ form.jobs_lost_last_year.id_for_label }}">
+                {{ form.jobs_lost_last_year.label }}
+              </label>
+              {{ form.jobs_lost_last_year }}
+            </div>
+
+            <div class="col-sm-6 col-lg-4">
+              <label class="form-label small fw-semibold" for="{{ form.jobs_added_expected.id_for_label }}">
+                {{ form.jobs_added_expected.label }}
+              </label>
+              {{ form.jobs_added_expected }}
+            </div>
+
           </div>
         </div>
       </div>
 
-      <!-- Expansion Opportunities -->
+      <!-- ================================================================
+           SECTION 4: Facility
+           ================================================================ -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-building me-2"></i>Facility
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold" for="{{ form.building_size_sqft.id_for_label }}">
+                {{ form.building_size_sqft.label }}
+              </label>
+              {{ form.building_size_sqft }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold" for="{{ form.at_capacity.id_for_label }}">
+                {{ form.at_capacity.label }}
+              </label>
+              {{ form.at_capacity }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SECTION 5: Expansion Opportunities
+           ================================================================ -->
       <div class="card mb-4">
         <div class="card-header py-3">
           <i class="bi bi-graph-up-arrow me-2"></i>Expansion Opportunities
           <span class="text-muted fw-normal small ms-2">Check all that apply</span>
         </div>
         <div class="card-body">
-          <div class="mb-2">
-            <div class="form-check">
-              {{ form.expansion_adding_sq_footage }}
-              <label class="form-check-label" for="{{ form.expansion_adding_sq_footage.id_for_label }}">
-                {{ form.expansion_adding_sq_footage.label }}
-              </label>
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <div class="form-check">
+                {{ form.expansion_adding_sq_footage }}
+                <label class="form-check-label" for="{{ form.expansion_adding_sq_footage.id_for_label }}">
+                  {{ form.expansion_adding_sq_footage.label }}
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="mb-2">
-            <div class="form-check">
-              {{ form.expansion_new_building }}
-              <label class="form-check-label" for="{{ form.expansion_new_building.id_for_label }}">
-                {{ form.expansion_new_building.label }}
-              </label>
+            <div class="col-sm-6">
+              <div class="form-check">
+                {{ form.expansion_new_building }}
+                <label class="form-check-label" for="{{ form.expansion_new_building.id_for_label }}">
+                  {{ form.expansion_new_building.label }}
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="mb-2">
-            <div class="form-check">
-              {{ form.expansion_adding_equipment }}
-              <label class="form-check-label" for="{{ form.expansion_adding_equipment.id_for_label }}">
-                {{ form.expansion_adding_equipment.label }}
-              </label>
+            <div class="col-sm-6">
+              <div class="form-check">
+                {{ form.expansion_adding_equipment }}
+                <label class="form-check-label" for="{{ form.expansion_adding_equipment.id_for_label }}">
+                  {{ form.expansion_adding_equipment.label }}
+                </label>
+              </div>
             </div>
-          </div>
-          <div class="mb-3">
-            <div class="form-check">
-              {{ form.expansion_capex_planned }}
-              <label class="form-check-label" for="{{ form.expansion_capex_planned.id_for_label }}">
-                {{ form.expansion_capex_planned.label }}
-              </label>
+            <div class="col-sm-6">
+              <div class="form-check">
+                {{ form.expansion_capex_planned }}
+                <label class="form-check-label" for="{{ form.expansion_capex_planned.id_for_label }}">
+                  {{ form.expansion_capex_planned.label }}
+                </label>
+              </div>
             </div>
           </div>
 
           <div id="expansionNotesSection" style="display:none;">
-            <label class="form-label fw-semibold small">{{ form.expansion_notes.label }}</label>
+            <label class="form-label small fw-semibold">{{ form.expansion_notes.label }}</label>
             {{ form.expansion_notes }}
           </div>
         </div>
       </div>
 
-      <!-- Business Lead -->
+      <!-- ================================================================
+           SECTION 6: How You Helped
+           ================================================================ -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-stars me-2"></i>Volunteer Impact
+        </div>
+        <div class="card-body">
+          <div class="form-check mb-3">
+            {{ form.volunteer_helped }}
+            <label class="form-check-label fw-semibold" for="{{ form.volunteer_helped.id_for_label }}">
+              {{ form.volunteer_helped.label }}
+            </label>
+          </div>
+          <div id="volunteerHelpedSection" style="display:none;">
+            <label class="form-label small fw-semibold">{{ form.volunteer_helped_notes.label }}</label>
+            {{ form.volunteer_helped_notes }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           SECTION 7: Business Opportunity
+           ================================================================ -->
       <div class="card mb-4">
         <div class="card-header py-3">
           <i class="bi bi-briefcase me-2"></i>Business Opportunity
@@ -100,30 +290,29 @@
         </div>
       </div>
 
-      <!-- Follow-up -->
+      <!-- ================================================================
+           SECTION 8: Follow-up
+           ================================================================ -->
       <div class="card mb-4">
         <div class="card-header py-3">
           <i class="bi bi-flag me-2"></i>Follow-up
         </div>
         <div class="card-body">
-          <div class="mb-3">
-            <div class="form-check">
-              {{ form.follow_up_needed }}
-              <label class="form-check-label fw-semibold" for="{{ form.follow_up_needed.id_for_label }}">
-                Follow-up needed?
-              </label>
-            </div>
+          <div class="form-check mb-3">
+            {{ form.follow_up_needed }}
+            <label class="form-check-label fw-semibold" for="{{ form.follow_up_needed.id_for_label }}">
+              Follow-up needed?
+            </label>
           </div>
-
           <div id="followUpSection" style="display:none;">
-            <label class="form-label fw-semibold">Follow-up Details</label>
+            <label class="form-label small fw-semibold">Follow-up Details</label>
             {{ form.follow_up_notes }}
           </div>
         </div>
       </div>
 
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
+      <div class="d-flex gap-2 mb-5">
+        <button type="submit" class="btn btn-primary px-4">
           <i class="bi bi-check-circle me-1"></i> Save Visit
         </button>
         <a href="{% url 'company_detail' assignment.pk %}" class="btn btn-outline-secondary">
@@ -138,6 +327,37 @@
 
 {% block extra_js %}
 <script>
+  // Additional contact toggle
+  document.getElementById('addContactBtn').addEventListener('click', function () {
+    const section = document.getElementById('additionalContactSection');
+    const visible = section.style.display !== 'none';
+    section.style.display = visible ? 'none' : 'block';
+    this.innerHTML = visible
+      ? '<i class="bi bi-person-plus me-1"></i> Add Additional Contact'
+      : '<i class="bi bi-dash me-1"></i> Remove Additional Contact';
+  });
+
+  // Expansion notes: show when any expansion checkbox is checked
+  const expansionChecks = [
+    document.getElementById('{{ form.expansion_adding_sq_footage.id_for_label }}'),
+    document.getElementById('{{ form.expansion_new_building.id_for_label }}'),
+    document.getElementById('{{ form.expansion_adding_equipment.id_for_label }}'),
+    document.getElementById('{{ form.expansion_capex_planned.id_for_label }}'),
+  ];
+  const expansionSection = document.getElementById('expansionNotesSection');
+
+  function updateExpansionNotes() {
+    expansionSection.style.display = expansionChecks.some(cb => cb && cb.checked) ? 'block' : 'none';
+  }
+  expansionChecks.forEach(cb => { if (cb) cb.addEventListener('change', updateExpansionNotes); });
+
+  // Volunteer helped toggle
+  const helpedCheck   = document.getElementById('{{ form.volunteer_helped.id_for_label }}');
+  const helpedSection = document.getElementById('volunteerHelpedSection');
+  helpedCheck.addEventListener('change', function () {
+    helpedSection.style.display = this.checked ? 'block' : 'none';
+  });
+
   // Follow-up toggle
   const followUpCheck   = document.getElementById('{{ form.follow_up_needed.id_for_label }}');
   const followUpSection = document.getElementById('followUpSection');
@@ -145,26 +365,9 @@
     followUpSection.style.display = this.checked ? 'block' : 'none';
   });
 
-  // Expansion notes: show when any expansion checkbox is checked
-  const expansionChecks   = [
-    document.getElementById('{{ form.expansion_adding_sq_footage.id_for_label }}'),
-    document.getElementById('{{ form.expansion_new_building.id_for_label }}'),
-    document.getElementById('{{ form.expansion_adding_equipment.id_for_label }}'),
-    document.getElementById('{{ form.expansion_capex_planned.id_for_label }}'),
-  ];
-  const expansionSection  = document.getElementById('expansionNotesSection');
-
-  function updateExpansionNotes() {
-    const anyChecked = expansionChecks.some(cb => cb && cb.checked);
-    expansionSection.style.display = anyChecked ? 'block' : 'none';
-  }
-
-  expansionChecks.forEach(cb => {
-    if (cb) cb.addEventListener('change', updateExpansionNotes);
-  });
-
-  // Run on load in case of form re-render with values
+  // Re-apply state on load (handles back button / form re-render)
   updateExpansionNotes();
+  if (helpedCheck.checked)   helpedSection.style.display   = 'block';
   if (followUpCheck.checked) followUpSection.style.display = 'block';
 </script>
 {% endblock %}

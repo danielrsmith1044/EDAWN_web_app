@@ -7,8 +7,8 @@ from django.contrib import messages
 from django.db.models import Count, Q
 
 from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply
-from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, MessageForm, ReplyForm,
-                     QuickCompanyForm, QuickAssignForm, CreateAdminForm)
+from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
+                     MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm)
 from .ratelimit import ratelimit
 
 
@@ -274,27 +274,32 @@ def log_contact_attempt(request, pk):
 @login_required
 def log_visit(request, pk):
     assignment = get_object_or_404(Assignment, pk=pk, volunteer=request.user)
+    company    = assignment.company
 
     if not assignment.is_active:
         messages.error(request, "This assignment is no longer active.")
         return redirect('company_detail', pk=pk)
 
     if request.method == 'POST':
-        form = VisitNoteForm(request.POST)
-        if form.is_valid():
+        form         = VisitNoteForm(request.POST)
+        contact_form = CompanyContactUpdateForm(request.POST, instance=company, prefix='contact')
+        if form.is_valid() and contact_form.is_valid():
+            contact_form.save()
             note            = form.save(commit=False)
             note.assignment = assignment
             note.visited_by = request.user
             note.save()
-            messages.success(request, f"Visit to {assignment.company.name} recorded!")
+            messages.success(request, f"Visit to {company.name} recorded!")
             return redirect('company_detail', pk=pk)
     else:
-        form = VisitNoteForm()
+        form         = VisitNoteForm()
+        contact_form = CompanyContactUpdateForm(instance=company, prefix='contact')
 
     return render(request, 'core/log_visit.html', {
-        'assignment': assignment,
-        'company':    assignment.company,
-        'form':       form,
+        'assignment':   assignment,
+        'company':      company,
+        'form':         form,
+        'contact_form': contact_form,
     })
 
 
