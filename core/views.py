@@ -461,13 +461,14 @@ def message_list(request):
         if user.is_staff:
             qs = Message.objects.filter(is_private=True)
         else:
-            qs = Message.objects.filter(is_private=True, sender=user)
+            qs = Message.objects.filter(
+                Q(is_private=True, sender=user) | Q(recipient=user)
+            )
     else:
-        # group (public) messages
-        qs = Message.objects.filter(is_private=False)
+        qs = Message.objects.filter(is_private=False, recipient__isnull=True)
 
     context = {
-        'messages_list': qs.select_related('sender'),
+        'messages_list': qs.select_related('sender', 'recipient'),
         'filter_type':   filter_type,
     }
     return render(request, 'core/message_list.html', context)
@@ -477,8 +478,11 @@ def message_list(request):
 def message_detail(request, pk):
     message = get_object_or_404(Message, pk=pk)
 
-    # Access control: private messages visible only to sender and staff
-    if message.is_private and not request.user.is_staff and message.sender != request.user:
+    # Access control: private messages visible to sender, recipient, and staff
+    if (message.is_private
+            and not request.user.is_staff
+            and message.sender != request.user
+            and message.recipient != request.user):
         messages.error(request, "You don't have access to this message.")
         return redirect('message_list')
 
@@ -505,9 +509,48 @@ def message_detail(request, pk):
 @login_required
 @ratelimit(max_attempts=10, window=300, key_prefix='msg_create')
 def message_create(request):
+    industries = (
+        Company.objects.exclude(industry='')
+        .values_list('industry', flat=True)
+        .distinct().order_by('industry')
+    )
+    volunteers = User.objects.filter(is_active=True, is_staff=False).order_by('first_name', 'last_name')
+
     if request.method == 'POST':
         form = MessageForm(request.POST)
         if form.is_valid():
+            subject = form.cleaned_data['subject']
+            body    = form.cleaned_data['body']
+
+            if request.user.is_staff:
+                group = request.POST.get('recipient_group', 'board')
+                if group == 'all_volunteers':
+                    recipients = list(User.objects.filter(is_active=True, is_staff=False))
+                elif group == 'by_industry':
+                    industry = request.POST.get('recipient_industry', '')
+                    recipients = list(
+                        User.objects.filter(
+                            is_active=True, is_staff=False,
+                            assignments__company__industry=industry,
+                            assignments__status=Assignment.STATUS_ACTIVE,
+                        ).distinct()
+                    )
+                elif group == 'specific_volunteer':
+                    vol_pk = request.POST.get('recipient_user', '')
+                    recipients = list(User.objects.filter(pk=vol_pk, is_active=True, is_staff=False))
+                else:
+                    recipients = None
+
+                if recipients is not None:
+                    for vol in recipients:
+                        Message.objects.create(
+                            sender=request.user, recipient=vol,
+                            subject=subject, body=body, is_private=True,
+                        )
+                    count = len(recipients)
+                    messages.success(request, f'Message sent to {count} volunteer{"s" if count != 1 else ""}.')
+                    return redirect('message_list')
+
             msg        = form.save(commit=False)
             msg.sender = request.user
             msg.save()
@@ -518,7 +561,12 @@ def message_create(request):
             return redirect('message_detail', pk=msg.pk)
     else:
         form = MessageForm()
-    return render(request, 'core/message_create.html', {'form': form})
+
+    return render(request, 'core/message_create.html', {
+        'form':       form,
+        'industries': industries,
+        'volunteers': volunteers,
+    })
 
 
 # ---------------------------------------------------------------------------

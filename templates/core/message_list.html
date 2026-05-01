@@ -37,7 +37,11 @@
       <div class="flex-grow-1 me-3">
         <div class="d-flex align-items-center gap-2 mb-1">
           <h6 class="mb-0 fw-semibold">{{ msg.subject }}</h6>
-          {% if msg.is_private %}
+          {% if msg.recipient %}
+          <span class="badge bg-info text-dark" style="font-size:.7rem;">
+            <i class="bi bi-envelope-fill"></i> Direct
+          </span>
+          {% elif msg.is_private %}
           <span class="badge bg-warning text-dark" style="font-size:.7rem;">
             <i class="bi bi-lock-fill"></i> Private
           </span>
@@ -46,6 +50,9 @@
         <p class="text-muted small mb-1">{{ msg.body|truncatewords:30 }}</p>
         <small class="text-muted">
           <i class="bi bi-person"></i> {{ msg.sender.get_full_name|default:msg.sender.username }}
+          {% if msg.recipient and request.user.is_staff %}
+            <span class="text-muted">→ {{ msg.recipient.get_full_name|default:msg.recipient.username }}</span>
+          {% endif %}
           &middot; {{ msg.created_at|timesince }} ago
           {% if msg.reply_count %}
             &middot; <i class="bi bi-chat-dots"></i> {{ msg.reply_count }} repl{{ msg.reply_count|pluralize:"y,ies" }}

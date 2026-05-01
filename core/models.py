@@ -246,6 +246,9 @@ class UserBadge(models.Model):
 
 class Message(models.Model):
     sender     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_sent')
+    recipient  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='messages_received',
+                                   help_text='Set for direct messages; blank for group board posts')
     subject    = models.CharField(max_length=200)
     body       = models.TextField()
     is_private = models.BooleanField(
