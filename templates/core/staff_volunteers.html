@@ -37,6 +37,11 @@
          class="btn btn-sm {% if status_filter == 'unassigned' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
         No Assignments
       </a>
+      <a href="?status=bbv_overdue"
+         class="btn btn-sm {% if status_filter == 'bbv_overdue' %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+        BBV Overdue
+        {% if bbv_overdue_count %}<span class="badge bg-warning text-dark ms-1">{{ bbv_overdue_count }}</span>{% endif %}
+      </a>
     </div>
   </div>
 </div>
@@ -52,6 +57,7 @@
           <th class="text-center">Completed</th>
           <th class="text-center">Lost</th>
           <th>Last Visit</th>
+          <th>Capacity</th>
           <th>Training</th>
           <th>Status</th>
         </tr>
@@ -92,6 +98,15 @@
             <span class="text-muted small">—</span>
             {% endif %}
           </td>
+          <td class="text-center">
+            {% if vol.profile.bbv_certified %}
+            <span class="text-muted small">Unlimited</span>
+            {% else %}
+            <span class="small {% if vol.active_count >= 1 %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+              {{ vol.active_count }}/1
+            </span>
+            {% endif %}
+          </td>
           <td>
             <form method="post" action="{% url 'staff_mark_training' vol.pk %}" style="display:inline;">
               {% csrf_token %}
@@ -122,6 +137,10 @@
             {% if vol.profile.bbv_certified %}
             <span class="badge rounded-pill ms-1" style="background:var(--edawn-blue); font-size:.65rem;">
               <i class="bi bi-patch-check-fill me-1"></i>BBV
+            </span>
+            {% elif vol.first_assignment and vol.first_assignment < cutoff_90 and vol.completed_count %}
+            <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:.65rem;">
+              BBV Overdue
             </span>
             {% endif %}
           </td>

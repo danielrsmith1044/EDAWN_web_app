@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 
 from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply, UserProfile
@@ -154,6 +154,23 @@ def quick_assign(request):
         if form.is_valid():
             company   = form.cleaned_data['company']
             volunteer = form.cleaned_data['volunteer']
+
+            # Non-BBV volunteers are limited to 1 active assignment
+            profile, _ = UserProfile.objects.get_or_create(user=volunteer)
+            if not profile.bbv_certified:
+                active_count = Assignment.objects.filter(
+                    volunteer=volunteer, status=Assignment.STATUS_ACTIVE
+                ).count()
+                if active_count >= 1:
+                    vol_name = volunteer.get_full_name() or volunteer.username
+                    messages.error(
+                        request,
+                        f"{vol_name} already has an active assignment. "
+                        f"Volunteers are limited to 1 active company until they earn "
+                        f"BBV certification."
+                    )
+                    return redirect('staff_assign')
+
             Assignment.objects.create(
                 company=company,
                 volunteer=volunteer,
@@ -163,7 +180,7 @@ def quick_assign(request):
             company.save(update_fields=['status'])
             vol_name = volunteer.get_full_name() or volunteer.username
             messages.success(request, f'"{company.name}" assigned to {vol_name}.')
-            return redirect('quick_assign')
+            return redirect('staff_assign')
     else:
         form = QuickAssignForm()
     recent = Assignment.objects.select_related('company', 'volunteer').order_by('-assigned_date')[:5]
@@ -520,6 +537,7 @@ _CSV_FIELD_MAP = {
 def staff_dashboard(request):
     cutoff_60 = timezone.now() - timedelta(days=60)
     cutoff_45 = timezone.now() - timedelta(days=45)
+    cutoff_90 = timezone.now() - timedelta(days=90)
 
     not_visited_60d = (
         Assignment.objects
@@ -538,6 +556,21 @@ def staff_dashboard(request):
         .order_by('first_name', 'last_name')
     )
 
+    bbv_overdue_count = (
+        User.objects
+        .filter(is_active=True, is_staff=False, profile__bbv_certified=False)
+        .annotate(
+            first_assignment=Min('assignments__assigned_date'),
+            completed_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
+                distinct=True,
+            ),
+        )
+        .filter(first_assignment__lt=cutoff_90, completed_count__gt=0)
+        .count()
+    )
+
     context = {
         'total_companies':    Company.objects.count(),
         'unassigned_count':   Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
@@ -547,6 +580,7 @@ def staff_dashboard(request):
         'not_visited_60d':    not_visited_60d,
         'overdue_count':      overdue_qs.count(),
         'overdue_volunteers': overdue_qs[:8],
+        'bbv_overdue_count':  bbv_overdue_count,
         'recent_assignments': (
             Assignment.objects
             .select_related('company', 'volunteer')
@@ -560,6 +594,7 @@ def staff_dashboard(request):
 def staff_volunteers(request):
     status_filter = request.GET.get('status', 'all')
     cutoff_45 = timezone.now() - timedelta(days=45)
+    cutoff_90 = timezone.now() - timedelta(days=90)
 
     volunteers = (
         User.objects
@@ -567,6 +602,7 @@ def staff_volunteers(request):
         .select_related('profile')
         .annotate(
             last_visit=Max('assignments__visit_notes__visit_date'),
+            first_assignment=Min('assignments__assigned_date'),
             active_count=Count(
                 'assignments',
                 filter=Q(assignments__status=Assignment.STATUS_ACTIVE),
@@ -594,12 +630,35 @@ def staff_volunteers(request):
         volunteers = volunteers.filter(active_count__gt=0)
     elif status_filter == 'unassigned':
         volunteers = volunteers.filter(active_count=0, completed_count=0, lost_count=0)
+    elif status_filter == 'bbv_overdue':
+        volunteers = volunteers.filter(
+            profile__bbv_certified=False,
+            first_assignment__lt=cutoff_90,
+            completed_count__gt=0,
+        )
+
+    bbv_overdue_count = (
+        User.objects
+        .filter(is_active=True, is_staff=False, profile__bbv_certified=False)
+        .annotate(
+            first_assignment=Min('assignments__assigned_date'),
+            completed_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
+                distinct=True,
+            ),
+        )
+        .filter(first_assignment__lt=cutoff_90, completed_count__gt=0)
+        .count()
+    )
 
     context = {
-        'volunteers':     volunteers,
-        'status_filter':  status_filter,
-        'cutoff_45':      cutoff_45,
-        'total_count':    User.objects.filter(is_active=True, is_staff=False).count(),
+        'volunteers':       volunteers,
+        'status_filter':    status_filter,
+        'cutoff_45':        cutoff_45,
+        'cutoff_90':        cutoff_90,
+        'total_count':      User.objects.filter(is_active=True, is_staff=False).count(),
+        'bbv_overdue_count': bbv_overdue_count,
     }
     return render(request, 'core/staff_volunteers.html', context)
 
