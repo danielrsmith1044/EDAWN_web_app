@@ -22,7 +22,11 @@ urlpatterns = [
     path('staff/add-company/', views.quick_add_company, name='staff_add_company'),
     path('staff/assign/',      views.quick_assign,      name='staff_assign'),
     path('staff/invite/',      views.quick_invite,      name='staff_invite'),
-    path('staff/create-admin/', views.create_admin,     name='staff_create_admin'),
+    path('staff/create-admin/', views.create_admin,        name='staff_create_admin'),
+    path('staff/export/',       views.staff_export_visits, name='staff_export_visits'),
+
+    # Resources
+    path('resources/', views.resource_list, name='resource_list'),
 
     # Companies
     path('companies/',                                        views.company_list,        name='company_list'),

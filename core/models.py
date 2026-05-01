@@ -298,6 +298,30 @@ class InviteCode(models.Model):
         return self.used_by is None
 
 
+class Resource(models.Model):
+    CATEGORY_CHOICES = [
+        ('visit_script',    'Visit Script'),
+        ('snapshot_form',   'Company Snapshot Form'),
+        ('workforce_guide', 'Workforce Guide'),
+        ('value_prop',      'EDAWN Value Prop'),
+        ('other',           'Other'),
+    ]
+
+    title       = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    url         = models.URLField(help_text='Link to document or external resource')
+    category    = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='other')
+    sort_order  = models.PositiveIntegerField(default=0)
+    is_active   = models.BooleanField(default=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['category', 'sort_order', 'title']
+
+    def __str__(self):
+        return self.title
+
+
 class UserProfile(models.Model):
     user                   = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     training_completed     = models.BooleanField(default=False)

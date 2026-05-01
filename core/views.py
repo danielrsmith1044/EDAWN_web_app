@@ -2,6 +2,7 @@ import csv
 import io
 from datetime import timedelta
 
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -11,10 +12,10 @@ from django.contrib import messages
 from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 
-from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply, UserProfile
+from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply, Resource, UserProfile
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
-                     CompanyCSVUploadForm)
+                     CompanyCSVUploadForm, VisitExportForm)
 from .ratelimit import ratelimit
 
 
@@ -787,3 +788,102 @@ def staff_mark_bbv(request, pk):
         messages.success(request, f"BBV certification granted to {name}.")
     profile.save(update_fields=['bbv_certified', 'bbv_certified_date'])
     return redirect('staff_volunteers')
+
+
+# ---------------------------------------------------------------------------
+# Resource library
+# ---------------------------------------------------------------------------
+
+@login_required
+def resource_list(request):
+    resources = Resource.objects.filter(is_active=True)
+    grouped = {}
+    for res in resources:
+        label = res.get_category_display()
+        grouped.setdefault(label, []).append(res)
+    return render(request, 'core/resource_list.html', {'grouped': grouped})
+
+
+# ---------------------------------------------------------------------------
+# Visit data export
+# ---------------------------------------------------------------------------
+
+@staff_member_required
+def staff_export_visits(request):
+    form = VisitExportForm(request.GET or None)
+    if request.GET and form.is_valid():
+        qs = (
+            VisitNote.objects
+            .select_related('assignment__company', 'visited_by')
+            .order_by('-visit_date')
+        )
+        if form.cleaned_data['date_from']:
+            qs = qs.filter(visit_date__date__gte=form.cleaned_data['date_from'])
+        if form.cleaned_data['date_to']:
+            qs = qs.filter(visit_date__date__lte=form.cleaned_data['date_to'])
+        if form.cleaned_data['industry']:
+            qs = qs.filter(assignment__company__industry=form.cleaned_data['industry'])
+        if form.cleaned_data['volunteer']:
+            qs = qs.filter(visited_by=form.cleaned_data['volunteer'])
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="visit_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow([
+            'Visit Date', 'Company', 'Industry', 'City', 'State',
+            'Volunteer', 'Contact Spoken To',
+            'Employee Count', 'Hiring Status',
+            'Jobs Added Last Year', 'Jobs Lost Last Year', 'Jobs Expected to Add',
+            'Building Sq Ft', 'At Capacity',
+            'Adding Sq Footage', 'New Building', 'Adding Equipment', 'CapEx Planned',
+            'Expansion Notes',
+            'Volunteer Helped', 'Volunteer Help Notes',
+            'Business Lead Received',
+            'Follow-up Needed', 'Follow-up Notes',
+            'Visit Notes',
+        ])
+        for note in qs:
+            company = note.assignment.company
+            writer.writerow([
+                note.visit_date.strftime('%Y-%m-%d'),
+                company.name,
+                company.industry,
+                company.city,
+                company.state,
+                note.visited_by.get_full_name() or note.visited_by.username,
+                note.contact_name,
+                note.employee_count or '',
+                note.get_hiring_status_display() if note.hiring_status else '',
+                note.jobs_added_last_year or '',
+                note.jobs_lost_last_year or '',
+                note.jobs_added_expected or '',
+                note.building_size_sqft or '',
+                note.get_at_capacity_display() if note.at_capacity else '',
+                'Yes' if note.expansion_adding_sq_footage else '',
+                'Yes' if note.expansion_new_building else '',
+                'Yes' if note.expansion_adding_equipment else '',
+                'Yes' if note.expansion_capex_planned else '',
+                note.expansion_notes,
+                'Yes' if note.volunteer_helped else '',
+                note.volunteer_helped_notes,
+                'Yes' if note.received_business_lead else '',
+                'Yes' if note.follow_up_needed else '',
+                note.follow_up_notes,
+                note.notes,
+            ])
+        return response
+
+    columns = [
+        'Visit Date', 'Company', 'Industry', 'City', 'State',
+        'Volunteer', 'Contact Spoken To',
+        'Employee Count', 'Hiring Status',
+        'Jobs Added Last Year', 'Jobs Lost Last Year', 'Jobs Expected to Add',
+        'Building Sq Ft', 'At Capacity',
+        'Adding Sq Footage', 'New Building', 'Adding Equipment', 'CapEx Planned',
+        'Expansion Notes',
+        'Volunteer Helped', 'Volunteer Help Notes',
+        'Business Lead Received',
+        'Follow-up Needed', 'Follow-up Notes',
+        'Visit Notes',
+    ]
+    return render(request, 'core/staff_export.html', {'form': form, 'columns': columns})

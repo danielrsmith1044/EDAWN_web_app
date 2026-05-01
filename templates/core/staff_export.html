@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Export Visit Data – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+      <li class="breadcrumb-item active">Export Visit Data</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-file-earmark-arrow-down me-2"></i>Export Visit Data</h4>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header py-3">
+        <i class="bi bi-funnel me-2"></i>Filter &amp; Export
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-4">
+          Apply any combination of filters below, then click Export to download a CSV.
+          Leave all filters blank to export the full visit history.
+        </p>
+        <form method="get">
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">{{ form.date_from.label }}</label>
+              {{ form.date_from }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">{{ form.date_to.label }}</label>
+              {{ form.date_to }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">{{ form.industry.label }}</label>
+              {{ form.industry }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold small">{{ form.volunteer.label }}</label>
+              {{ form.volunteer }}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-download me-1"></i>Download CSV
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header py-3">
+        <i class="bi bi-table me-2"></i>Exported Columns
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush small">
+          {% for col in columns %}
+          <li class="list-group-item px-4 py-2 text-muted">{{ col }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

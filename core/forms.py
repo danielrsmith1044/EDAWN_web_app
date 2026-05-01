@@ -291,3 +291,38 @@ class CompanyCSVUploadForm(forms.Form):
         help_text='If checked, companies with matching names will be updated rather than skipped.',
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
+
+
+class VisitExportForm(forms.Form):
+    date_from = forms.DateField(
+        required=False,
+        label='From',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label='To',
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),
+    )
+    industry = forms.ChoiceField(
+        required=False,
+        label='Industry',
+        choices=[],
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+    )
+    volunteer = forms.ModelChoiceField(
+        required=False,
+        label='Volunteer',
+        queryset=User.objects.filter(is_active=True, is_staff=False).order_by('first_name', 'last_name'),
+        empty_label='All volunteers',
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        industries = (
+            Company.objects.exclude(industry='')
+            .values_list('industry', flat=True)
+            .distinct().order_by('industry')
+        )
+        self.fields['industry'].choices = [('', 'All industries')] + [(i, i) for i in industries]

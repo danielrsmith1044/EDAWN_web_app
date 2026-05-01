@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .forms import CompanyCSVUploadForm
-from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, UserBadge, UserProfile, VisitNote
+from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, Resource, UserBadge, UserProfile, VisitNote
 
 # ---------------------------------------------------------------------------
 # Site branding
@@ -446,3 +446,16 @@ class MessageAdmin(admin.ModelAdmin):
     @admin.display(description='Replies')
     def reply_count(self, obj):
         return obj.replies.count()
+
+
+# ---------------------------------------------------------------------------
+# Resources
+# ---------------------------------------------------------------------------
+
+@admin.register(Resource)
+class ResourceAdmin(admin.ModelAdmin):
+    list_display  = ('title', 'category', 'sort_order', 'is_active', 'created_at')
+    list_filter   = ('category', 'is_active')
+    list_editable = ('sort_order', 'is_active')
+    search_fields = ('title', 'description')
+    ordering      = ('category', 'sort_order', 'title')
