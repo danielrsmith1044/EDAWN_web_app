@@ -78,6 +78,9 @@
           <i class="bi bi-inbox me-1"></i>View Unassigned
           {% if unassigned_count %}<span class="badge bg-warning text-dark ms-1">{{ unassigned_count }}</span>{% endif %}
         </a>
+        <a href="{% url 'staff_expansion_signals' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-graph-up-arrow me-1"></i>Expansion Signals
+        </a>
         <a href="{% url 'staff_invite' %}" class="btn btn-outline-secondary">
           <i class="bi bi-link-45deg me-1"></i>Invite Volunteer
         </a>

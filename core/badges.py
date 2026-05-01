@@ -46,3 +46,46 @@ def check_and_award_badges(user):
         )
 
     return newly_earned
+
+
+def check_bbv_eligibility(user):
+    """Award Certified BBV designation if volunteer visited in each of the last 3 calendar months."""
+    from .models import Badge, Message, UserBadge, UserProfile, VisitNote
+    from django.utils import timezone
+
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if profile.bbv_certified:
+        return
+
+    now = timezone.now()
+    for months_back in range(1, 4):
+        month = now.month - months_back
+        year  = now.year
+        while month <= 0:
+            month += 12
+            year  -= 1
+        if not VisitNote.objects.filter(
+            visited_by=user,
+            visit_date__year=year,
+            visit_date__month=month,
+        ).exists():
+            return
+
+    profile.bbv_certified      = True
+    profile.bbv_certified_date = now
+    profile.save(update_fields=['bbv_certified', 'bbv_certified_date'])
+
+    bbv_badge = Badge.objects.filter(name='Certified Business Builder Volunteer').first()
+    if bbv_badge:
+        UserBadge.objects.get_or_create(user=user, badge=bbv_badge)
+
+    display_name = user.get_full_name() or user.username
+    Message.objects.create(
+        sender=user,
+        subject=f'{display_name} earned Certified BBV!',
+        body=(
+            f'{display_name} has completed 3 consecutive months of active volunteering '
+            f'and earned the Certified Business Builder Volunteer (BBV) designation!'
+        ),
+        is_private=True,
+    )

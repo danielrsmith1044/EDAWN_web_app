@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Expansion Signals – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+      <li class="breadcrumb-item active">Expansion Signals</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0 fw-bold"><i class="bi bi-graph-up-arrow me-2"></i>Expansion Signals</h4>
+    <span class="badge rounded-pill fs-6" style="background:var(--edawn-blue);">{{ count }} result{{ count|pluralize }}</span>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+      <div>
+        <label class="form-label small fw-semibold mb-1">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm" style="min-width:140px;">
+      </div>
+      <div>
+        <label class="form-label small fw-semibold mb-1">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm" style="min-width:140px;">
+      </div>
+      <div>
+        <label class="form-label small fw-semibold mb-1">Industry</label>
+        <select name="industry" class="form-select form-select-sm" style="min-width:160px;">
+          <option value="">All industries</option>
+          {% for ind in industries %}
+          <option value="{{ ind }}" {% if industry == ind %}selected{% endif %}>{{ ind }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+        <a href="{% url 'staff_expansion_signals' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Results -->
+{% if signals %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Company</th>
+          <th>Industry</th>
+          <th>Volunteer</th>
+          <th>Visit Date</th>
+          <th>Expansion Flags</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for note in signals %}
+        <tr>
+          <td>
+            <a href="{% url 'company_detail' note.assignment.pk %}"
+               class="fw-semibold text-decoration-none">
+              {{ note.assignment.company.name }}
+            </a>
+          </td>
+          <td><small class="text-muted">{{ note.assignment.company.industry|default:"—" }}</small></td>
+          <td><small>{{ note.visited_by.get_full_name|default:note.visited_by.username }}</small></td>
+          <td><small class="text-nowrap">{{ note.visit_date|date:"M d, Y" }}</small></td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+              {% if note.expansion_adding_sq_footage %}
+              <span class="badge rounded-pill bg-info text-dark" style="font-size:.7rem;">Adding SF</span>
+              {% endif %}
+              {% if note.expansion_new_building %}
+              <span class="badge rounded-pill bg-info text-dark" style="font-size:.7rem;">New Building</span>
+              {% endif %}
+              {% if note.expansion_adding_equipment %}
+              <span class="badge rounded-pill bg-info text-dark" style="font-size:.7rem;">Equipment</span>
+              {% endif %}
+              {% if note.expansion_capex_planned %}
+              <span class="badge rounded-pill bg-info text-dark" style="font-size:.7rem;">CapEx</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if note.expansion_notes %}
+            <small class="text-muted">{{ note.expansion_notes|truncatewords:15 }}</small>
+            {% else %}
+            <small class="text-muted">—</small>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-graph-up-arrow fs-2 d-block mb-2"></i>
+    No expansion signals found{% if date_from or date_to or industry %} for the current filters{% endif %}.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

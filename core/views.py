@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.db.models import Count, Max, Q
 from django.utils import timezone
 
-from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply
+from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply, UserProfile
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
                      CompanyCSVUploadForm)
@@ -71,6 +71,7 @@ def logout_view(request):
 def _leaderboard_qs():
     return (
         User.objects
+        .select_related('profile')
         .annotate(completed_count=Count(
             'assignments',
             filter=Q(assignments__status=Assignment.STATUS_COMPLETED)
@@ -563,6 +564,7 @@ def staff_volunteers(request):
     volunteers = (
         User.objects
         .filter(is_active=True, is_staff=False)
+        .select_related('profile')
         .annotate(
             last_visit=Max('assignments__visit_notes__visit_date'),
             active_count=Count(
@@ -651,3 +653,64 @@ def staff_import_csv(request):
 
     recent = Company.objects.order_by('-created_at')[:10]
     return render(request, 'core/staff_import.html', {'form': form, 'recent': recent})
+
+
+@staff_member_required
+def staff_expansion_signals(request):
+    date_from = request.GET.get('date_from', '')
+    date_to   = request.GET.get('date_to', '')
+    industry  = request.GET.get('industry', '')
+
+    qs = (
+        VisitNote.objects
+        .filter(
+            Q(expansion_adding_sq_footage=True) |
+            Q(expansion_new_building=True) |
+            Q(expansion_adding_equipment=True) |
+            Q(expansion_capex_planned=True)
+        )
+        .select_related('assignment__company', 'visited_by')
+        .order_by('-visit_date')
+    )
+
+    if date_from:
+        qs = qs.filter(visit_date__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(visit_date__date__lte=date_to)
+    if industry:
+        qs = qs.filter(assignment__company__industry=industry)
+
+    industries = (
+        Company.objects.exclude(industry='')
+        .values_list('industry', flat=True)
+        .distinct().order_by('industry')
+    )
+
+    context = {
+        'signals':    qs,
+        'count':      qs.count(),
+        'date_from':  date_from,
+        'date_to':    date_to,
+        'industry':   industry,
+        'industries': industries,
+    }
+    return render(request, 'core/staff_expansion_signals.html', context)
+
+
+@staff_member_required
+def staff_mark_training(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_volunteers')
+    volunteer = get_object_or_404(User, pk=pk, is_staff=False)
+    profile, _ = UserProfile.objects.get_or_create(user=volunteer)
+    name = volunteer.get_full_name() or volunteer.username
+    if profile.training_completed:
+        profile.training_completed      = False
+        profile.training_completed_date = None
+        messages.success(request, f"Training marked incomplete for {name}.")
+    else:
+        profile.training_completed      = True
+        profile.training_completed_date = timezone.now().date()
+        messages.success(request, f"Training marked complete for {name}.")
+    profile.save(update_fields=['training_completed', 'training_completed_date'])
+    return redirect('staff_volunteers')

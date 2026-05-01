@@ -4,6 +4,8 @@ from urllib.parse import quote_plus
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class Company(models.Model):
@@ -198,9 +200,10 @@ class VisitNote(models.Model):
             self.assignment.save(update_fields=['status', 'completed_date'])
             self.assignment.company.status = Company.STATUS_VISITED
             self.assignment.company.save(update_fields=['status'])
-        # Check for badge awards
-        from .badges import check_and_award_badges
+        # Check for badge and BBV awards
+        from .badges import check_and_award_badges, check_bbv_eligibility
         check_and_award_badges(self.visited_by)
+        check_bbv_eligibility(self.visited_by)
 
 
 class Badge(models.Model):
@@ -294,3 +297,20 @@ class InviteCode(models.Model):
     @property
     def is_available(self):
         return self.used_by is None
+
+
+class UserProfile(models.Model):
+    user                   = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    training_completed     = models.BooleanField(default=False)
+    training_completed_date = models.DateField(null=True, blank=True)
+    bbv_certified          = models.BooleanField(default=False)
+    bbv_certified_date     = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Profile: {self.user.username}"
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.get_or_create(user=instance)

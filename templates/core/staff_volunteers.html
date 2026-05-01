@@ -52,6 +52,7 @@
           <th class="text-center">Completed</th>
           <th class="text-center">Lost</th>
           <th>Last Visit</th>
+          <th>Training</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -92,6 +93,21 @@
             {% endif %}
           </td>
           <td>
+            <form method="post" action="{% url 'staff_mark_training' vol.pk %}" style="display:inline;">
+              {% csrf_token %}
+              {% if vol.profile.training_completed %}
+              <button type="submit" class="btn btn-sm btn-success py-0 px-2"
+                      title="{{ vol.profile.training_completed_date|date:'M d, Y' }}">
+                <i class="bi bi-check-lg me-1"></i>Done
+              </button>
+              {% else %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                Mark Done
+              </button>
+              {% endif %}
+            </form>
+          </td>
+          <td>
             {% if vol.active_count %}
               {% if not vol.last_visit or vol.last_visit < cutoff_45 %}
                 <span class="badge bg-danger rounded-pill">Overdue</span>
@@ -102,6 +118,11 @@
               <span class="badge bg-secondary rounded-pill">No Active</span>
             {% else %}
               <span class="badge bg-light text-muted rounded-pill">Unassigned</span>
+            {% endif %}
+            {% if vol.profile.bbv_certified %}
+            <span class="badge rounded-pill ms-1" style="background:var(--edawn-blue); font-size:.65rem;">
+              <i class="bi bi-patch-check-fill me-1"></i>BBV
+            </span>
             {% endif %}
           </td>
         </tr>

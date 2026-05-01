@@ -15,7 +15,9 @@ urlpatterns = [
     # Staff portal
     path('staff/',             views.staff_dashboard,  name='staff_dashboard'),
     path('staff/volunteers/',  views.staff_volunteers, name='staff_volunteers'),
-    path('staff/import/',      views.staff_import_csv, name='staff_import_csv'),
+    path('staff/import/',                          views.staff_import_csv,         name='staff_import_csv'),
+    path('staff/expansion-signals/',               views.staff_expansion_signals,   name='staff_expansion_signals'),
+    path('staff/volunteers/<int:pk>/training/',    views.staff_mark_training,       name='staff_mark_training'),
     path('staff/add-company/', views.quick_add_company, name='staff_add_company'),
     path('staff/assign/',      views.quick_assign,      name='staff_assign'),
     path('staff/invite/',      views.quick_invite,      name='staff_invite'),

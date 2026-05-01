@@ -183,6 +183,9 @@
       <a href="{% url 'staff_volunteers' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_volunteers' %}active{% endif %}">
         <i class="bi bi-people"></i> Volunteer Roster
       </a>
+      <a href="{% url 'staff_expansion_signals' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_expansion_signals' %}active{% endif %}">
+        <i class="bi bi-graph-up-arrow"></i> Expansion Signals
+      </a>
       <a href="{% url 'staff_import_csv' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_import_csv' %}active{% endif %}">
         <i class="bi bi-file-earmark-arrow-up"></i> Import CSV
       </a>

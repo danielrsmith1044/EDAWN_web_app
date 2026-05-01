@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .forms import CompanyCSVUploadForm
-from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, UserBadge, VisitNote
+from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, UserBadge, UserProfile, VisitNote
 
 # ---------------------------------------------------------------------------
 # Site branding
@@ -76,11 +76,18 @@ admin.AdminSite.index = _custom_index
 # ---------------------------------------------------------------------------
 # User (re-register with search_fields for autocomplete)
 # ---------------------------------------------------------------------------
+class UserProfileInline(admin.StackedInline):
+    model  = UserProfile
+    extra  = 0
+    fields = ('training_completed', 'training_completed_date', 'bbv_certified', 'bbv_certified_date')
+
+
 admin.site.unregister(User)
 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
+    inlines = list(UserAdmin.inlines or []) + [UserProfileInline]
     search_fields = ('username', 'first_name', 'last_name', 'email')
     list_display  = ('username', 'first_name', 'last_name', 'email',
                      'is_active', 'last_login', 'last_visit_col', 'visit_count_col', 'inactivity_flag_col')

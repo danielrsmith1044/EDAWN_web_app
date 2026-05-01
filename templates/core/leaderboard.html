@@ -68,8 +68,13 @@
               </td>
               <td>
                 <span class="fw-semibold">{{ u.get_full_name|default:u.username }}</span>
+                {% if u.profile.bbv_certified %}
+                <span class="badge rounded-pill ms-1" style="background:var(--edawn-blue); font-size:.65rem;">
+                  <i class="bi bi-patch-check-fill me-1"></i>BBV
+                </span>
+                {% endif %}
                 {% if u == request.user %}
-                <span class="badge bg-primary ms-2 rounded-pill">You</span>
+                <span class="badge bg-primary ms-1 rounded-pill">You</span>
                 {% endif %}
               </td>
               <td class="text-center fw-bold">{{ u.completed_count }}</td>
