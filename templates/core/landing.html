@@ -30,6 +30,10 @@
       padding: .9rem 0;
     }
     .navbar-edawn .navbar-brand img { max-height: 44px; }
+    @media (max-width: 576px) {
+      .navbar-edawn { padding: .5rem 0; }
+      .navbar-edawn .navbar-brand img { max-height: 32px; }
+    }
     .navbar-edawn .btn-login {
       background: var(--edawn-teal);
       border-color: var(--edawn-teal);
@@ -341,7 +345,7 @@
 <nav class="navbar navbar-edawn">
   <div class="container d-flex align-items-center justify-content-between">
     <a class="navbar-brand" href="{% url 'landing' %}">
-      <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="max-height:64px;">
+      <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN">
     </a>
     <a href="{% url 'login' %}" class="btn btn-login">
       <i class="bi bi-box-arrow-in-right me-1"></i> Volunteer Sign In
