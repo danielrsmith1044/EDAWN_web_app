@@ -305,6 +305,47 @@ class InviteCode(models.Model):
         return self.used_by is None
 
 
+class AssignmentRequest(models.Model):
+    STATUS_PENDING  = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_DENIED   = 'denied'
+    STATUS_CHOICES  = [
+        (STATUS_PENDING,  'Pending'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_DENIED,   'Denied'),
+    ]
+
+    company   = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='assignment_requests')
+    volunteer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assignment_requests')
+    status    = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('company', 'volunteer')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        name = self.volunteer.get_full_name() or self.volunteer.username
+        return f"{name} → {self.company.name} ({self.status})"
+
+
+class Notice(models.Model):
+    title      = models.CharField(max_length=200)
+    body       = models.TextField(blank=True)
+    link_url   = models.URLField(blank=True)
+    link_text  = models.CharField(max_length=100, blank=True)
+    is_active  = models.BooleanField(default=True)
+    expires_at = models.DateTimeField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='notices_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['expires_at']
+
+    def __str__(self):
+        return self.title
+
+
 class Resource(models.Model):
     CATEGORY_CHOICES = [
         ('visit_script',    'Visit Script'),

@@ -22,13 +22,22 @@ urlpatterns = [
     path('staff/add-company/', views.quick_add_company, name='staff_add_company'),
     path('staff/assign/',      views.quick_assign,      name='staff_assign'),
     path('staff/invite/',      views.quick_invite,      name='staff_invite'),
-    path('staff/create-admin/', views.create_admin,        name='staff_create_admin'),
-    path('staff/export/',       views.staff_export_visits, name='staff_export_visits'),
+    path('staff/create-admin/', views.create_admin,          name='staff_create_admin'),
+    path('staff/export/',       views.staff_export_visits,   name='staff_export_visits'),
+    path('staff/requests/',     views.staff_requests,        name='staff_requests'),
+    path('staff/requests/<int:pk>/approve/', views.staff_approve_request, name='staff_approve_request'),
+    path('staff/requests/<int:pk>/deny/',    views.staff_deny_request,    name='staff_deny_request'),
+    path('staff/notices/',               views.staff_notices,       name='staff_notices'),
+    path('staff/notices/new/',           views.staff_notice_form,   name='staff_notice_create'),
+    path('staff/notices/<int:pk>/edit/', views.staff_notice_form,   name='staff_notice_edit'),
+    path('staff/notices/<int:pk>/delete/', views.staff_notice_delete, name='staff_notice_delete'),
 
     # Resources
     path('resources/', views.resource_list, name='resource_list'),
 
     # Companies
+    path('companies/browse/',    views.company_browse,           name='company_browse'),
+    path('companies/<int:pk>/request/', views.toggle_assignment_request, name='toggle_assignment_request'),
     path('companies/',                                        views.company_list,        name='company_list'),
     path('companies/<int:pk>/',                               views.company_detail,      name='company_detail'),
     path('companies/<int:pk>/contact/',                       views.log_contact_attempt, name='log_contact_attempt'),

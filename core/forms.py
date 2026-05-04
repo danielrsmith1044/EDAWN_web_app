@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Assignment, Company, ContactAttempt, InviteCode, VisitNote, Message, Reply
+from .models import Assignment, AssignmentRequest, Company, ContactAttempt, InviteCode, Notice, VisitNote, Message, Reply
 
 _fc = {'class': 'form-control'}
 _fs = {'class': 'form-select'}
@@ -291,6 +291,25 @@ class CompanyCSVUploadForm(forms.Form):
         help_text='If checked, companies with matching names will be updated rather than skipped.',
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
+
+
+class NoticeForm(forms.ModelForm):
+    class Meta:
+        model  = Notice
+        fields = ('title', 'body', 'link_url', 'link_text', 'is_active', 'expires_at')
+        widgets = {
+            'title':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Volunteer Appreciation Night — June 15'}),
+            'body':       forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Optional details...'}),
+            'link_url':   forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://...'}),
+            'link_text':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. RSVP here'}),
+            'is_active':  forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'expires_at': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        }
+        labels = {
+            'link_url':   'Button link (optional)',
+            'link_text':  'Button label (optional)',
+            'expires_at': 'Expires at',
+        }
 
 
 class VisitExportForm(forms.Form):

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Companies – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4 class="mb-0 fw-bold"><i class="bi bi-building-add me-2"></i>Browse Unassigned Companies</h4>
+  <p class="text-muted small mb-0 mt-1">Request up to {{ request_limit }} companies at a time. Staff will review and assign.</p>
+</div>
+
+{% if at_cap %}
+<div class="alert alert-warning py-2 px-3 small mb-4">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  You already have an active assignment. Complete it before requesting a new company.
+  {% if not request.user.profile.bbv_certified %}
+  Earn BBV certification to hold multiple assignments.
+  {% endif %}
+</div>
+{% endif %}
+
+{% if pending_count %}
+<div class="alert alert-info py-2 px-3 small mb-4">
+  <i class="bi bi-clock me-1"></i>
+  You have <strong>{{ pending_count }} of {{ request_limit }}</strong> pending request{{ pending_count|pluralize }}.
+  Click a company's button again to cancel that request.
+</div>
+{% endif %}
+
+<!-- Industry filter -->
+<div class="card mb-4">
+  <div class="card-body py-2">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <span class="text-muted small me-1">Industry:</span>
+      <a href="?" class="btn btn-sm {% if not industry_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">All</a>
+      {% for ind in industries %}
+      <a href="?industry={{ ind }}"
+         class="btn btn-sm {% if industry_filter == ind %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        {{ ind }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Company table -->
+{% if companies %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Company</th>
+          <th>Industry</th>
+          <th>Location</th>
+          <th class="text-center">Requests</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for company in companies %}
+        <tr>
+          <td class="fw-semibold">{{ company.name }}</td>
+          <td><small class="text-muted">{{ company.industry|default:"—" }}</small></td>
+          <td>
+            <small class="text-muted">
+              {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% else %}—{% endif %}
+            </small>
+          </td>
+          <td class="text-center">
+            {% if company.pending_requests %}
+            <span class="badge bg-secondary rounded-pill"
+                  data-bs-toggle="tooltip"
+                  data-bs-title="{{ company.pending_requests }} other volunteer{{ company.pending_requests|pluralize }} ha{{ company.pending_requests|pluralize:'s,ve' }} requested this company">
+              {{ company.pending_requests }}
+            </span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            {% if company.pk in my_request_ids %}
+            <form method="post" action="{% url 'toggle_assignment_request' company.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-warning py-0 px-2">
+                <i class="bi bi-x me-1"></i>Cancel Request
+              </button>
+            </form>
+            {% elif at_cap or pending_count >= request_limit %}
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2" disabled
+                    data-bs-toggle="tooltip"
+                    data-bs-title="{% if at_cap %}Complete your current assignment first{% else %}Cancel a pending request to make room{% endif %}">
+              Request
+            </button>
+            {% else %}
+            <form method="post" action="{% url 'toggle_assignment_request' company.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2">
+                <i class="bi bi-plus me-1"></i>Request
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-building-check fs-2 d-block mb-2"></i>
+    {% if industry_filter %}No unassigned companies in that industry.{% else %}All companies are currently assigned.{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

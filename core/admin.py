@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .forms import CompanyCSVUploadForm
-from .models import Assignment, Badge, Company, ContactAttempt, InviteCode, Message, Reply, Resource, UserBadge, UserProfile, VisitNote
+from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 
 # ---------------------------------------------------------------------------
 # Site branding
@@ -459,3 +459,19 @@ class ResourceAdmin(admin.ModelAdmin):
     list_editable = ('sort_order', 'is_active')
     search_fields = ('title', 'description')
     ordering      = ('category', 'sort_order', 'title')
+
+
+@admin.register(AssignmentRequest)
+class AssignmentRequestAdmin(admin.ModelAdmin):
+    list_display  = ('volunteer', 'company', 'status', 'created_at')
+    list_filter   = ('status',)
+    search_fields = ('volunteer__username', 'volunteer__first_name', 'company__name')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(Notice)
+class NoticeAdmin(admin.ModelAdmin):
+    list_display  = ('title', 'is_active', 'expires_at', 'created_by', 'created_at')
+    list_filter   = ('is_active',)
+    list_editable = ('is_active',)
+    readonly_fields = ('created_at', 'created_by')

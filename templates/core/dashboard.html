@@ -10,6 +10,22 @@
   </div>
 </div>
 
+{% for notice in notices %}
+<div class="alert alert-primary d-flex align-items-start gap-3 mb-3" role="alert">
+  <i class="bi bi-megaphone-fill fs-5 flex-shrink-0 mt-1"></i>
+  <div class="flex-grow-1">
+    <strong>{{ notice.title }}</strong>
+    {% if notice.body %}<div class="small mt-1">{{ notice.body }}</div>{% endif %}
+  </div>
+  {% if notice.link_url %}
+  <a href="{{ notice.link_url }}" target="_blank" rel="noopener"
+     class="btn btn-sm btn-outline-primary text-nowrap flex-shrink-0">
+    {{ notice.link_text|default:"Learn more" }} <i class="bi bi-box-arrow-up-right ms-1"></i>
+  </a>
+  {% endif %}
+</div>
+{% endfor %}
+
 {% if training_calendar_url %}
 <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" role="alert">
   <i class="bi bi-calendar-check fs-4 flex-shrink-0"></i>

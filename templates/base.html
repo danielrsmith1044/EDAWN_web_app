@@ -165,8 +165,11 @@
       <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
-      <a href="{% url 'company_list' %}" class="nav-link {% if 'company' in request.resolver_match.url_name %}active{% endif %}">
+      <a href="{% url 'company_list' %}" class="nav-link {% if request.resolver_match.url_name == 'company_list' or request.resolver_match.url_name == 'company_detail' %}active{% endif %}">
         <i class="bi bi-building"></i> My Companies
+      </a>
+      <a href="{% url 'company_browse' %}" class="nav-link {% if request.resolver_match.url_name == 'company_browse' %}active{% endif %}">
+        <i class="bi bi-building-add"></i> Browse Companies
       </a>
       <a href="{% url 'badge_list' %}" class="nav-link {% if 'badge' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-award"></i> Badges
@@ -200,6 +203,13 @@
       </a>
       <a href="{% url 'staff_export_visits' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_export_visits' %}active{% endif %}">
         <i class="bi bi-file-earmark-arrow-down"></i> Export Data
+      </a>
+      <a href="{% url 'staff_requests' %}" class="nav-link {% if 'request' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-inbox"></i> Requests
+        {% with pending=request.user.is_staff %}{% endwith %}
+      </a>
+      <a href="{% url 'staff_notices' %}" class="nav-link {% if 'notice' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-megaphone"></i> Notices
       </a>
       <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.1)">
       <a href="{% url 'admin:index' %}" class="nav-link" style="opacity:.6; font-size:.85rem;">

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}{% if notice %}Edit Notice{% else %}New Notice{% endif %} – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff_notices' %}">Notices</a></li>
+      <li class="breadcrumb-item active">{% if notice %}Edit{% else %}New{% endif %}</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold">
+    <i class="bi bi-megaphone me-2"></i>{% if notice %}Edit Notice{% else %}New Notice{% endif %}
+  </h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.title.label }} <span class="text-danger">*</span></label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Details <span class="text-muted fw-normal small">(optional)</span></label>
+            {{ form.body }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.expires_at.label }} <span class="text-danger">*</span></label>
+            {{ form.expires_at }}
+            <div class="form-text">Notice disappears from dashboards after this date and time.</div>
+            {% if form.expires_at.errors %}<div class="text-danger small mt-1">{{ form.expires_at.errors }}</div>{% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-8">
+              <label class="form-label fw-semibold">{{ form.link_url.label }}</label>
+              {{ form.link_url }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">{{ form.link_text.label }}</label>
+              {{ form.link_text }}
+              <div class="form-text">Defaults to "Learn more"</div>
+            </div>
+          </div>
+
+          <div class="form-check mb-4">
+            {{ form.is_active }}
+            <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+              Active (visible on volunteer dashboards)
+            </label>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i>Save Notice
+            </button>
+            <a href="{% url 'staff_notices' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

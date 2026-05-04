@@ -13,10 +13,10 @@ from django.contrib import messages
 from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 
-from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply, Resource, UserProfile
+from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
-                     CompanyCSVUploadForm, VisitExportForm)
+                     CompanyCSVUploadForm, VisitExportForm, NoticeForm)
 from .ratelimit import ratelimit
 
 
@@ -130,6 +130,8 @@ def dashboard(request):
     profile = getattr(user, 'profile', None)
     if profile and not profile.training_completed and settings.TRAINING_CALENDAR_URL:
         context['training_calendar_url'] = settings.TRAINING_CALENDAR_URL
+
+    context['notices'] = Notice.objects.filter(is_active=True, expires_at__gt=timezone.now())
 
     return render(request, 'core/dashboard.html', context)
 
@@ -639,7 +641,8 @@ def staff_dashboard(request):
         'not_visited_60d':    not_visited_60d,
         'overdue_count':      len(overdue_volunteers),
         'overdue_volunteers': overdue_volunteers,
-        'bbv_overdue_count':  _bbv_overdue_count(cutoff_90),
+        'bbv_overdue_count':    _bbv_overdue_count(cutoff_90),
+        'pending_requests_count': AssignmentRequest.objects.filter(status=AssignmentRequest.STATUS_PENDING).count(),
         'recent_assignments': (
             Assignment.objects
             .select_related('company', 'volunteer')
@@ -940,3 +943,203 @@ def staff_export_visits(request):
         'Visit Notes',
     ]
     return render(request, 'core/staff_export.html', {'form': form, 'columns': columns})
+
+
+# ---------------------------------------------------------------------------
+# Company browse & assignment requests
+# ---------------------------------------------------------------------------
+
+REQUEST_LIMIT = 3
+
+@login_required
+def company_browse(request):
+    companies = (
+        Company.objects.filter(status=Company.STATUS_UNASSIGNED)
+        .annotate(pending_requests=Count(
+            'assignment_requests',
+            filter=Q(assignment_requests__status=AssignmentRequest.STATUS_PENDING),
+        ))
+        .order_by('industry', 'name')
+    )
+
+    # Filter by industry
+    industry_filter = request.GET.get('industry', '')
+    if industry_filter:
+        companies = companies.filter(industry=industry_filter)
+
+    industries = (
+        Company.objects.filter(status=Company.STATUS_UNASSIGNED)
+        .exclude(industry='').values_list('industry', flat=True)
+        .distinct().order_by('industry')
+    )
+
+    # Current user's pending requests
+    my_requests = AssignmentRequest.objects.filter(
+        volunteer=request.user, status=AssignmentRequest.STATUS_PENDING
+    ).values_list('company_id', flat=True)
+
+    profile = getattr(request.user, 'profile', None)
+    at_cap = (
+        not getattr(profile, 'bbv_certified', False)
+        and Assignment.objects.filter(volunteer=request.user, status=Assignment.STATUS_ACTIVE).exists()
+    )
+
+    context = {
+        'companies':       companies,
+        'industries':      industries,
+        'industry_filter': industry_filter,
+        'my_request_ids':  set(my_requests),
+        'pending_count':   len(my_requests),
+        'request_limit':   REQUEST_LIMIT,
+        'at_cap':          at_cap,
+    }
+    return render(request, 'core/company_browse.html', context)
+
+
+@login_required
+def toggle_assignment_request(request, pk):
+    if request.method != 'POST':
+        return redirect('company_browse')
+
+    company = get_object_or_404(Company, pk=pk, status=Company.STATUS_UNASSIGNED)
+    existing = AssignmentRequest.objects.filter(
+        volunteer=request.user, company=company
+    ).first()
+
+    if existing and existing.status == AssignmentRequest.STATUS_PENDING:
+        existing.delete()
+        messages.success(request, f'Request for "{company.name}" cancelled.')
+        return redirect('company_browse')
+
+    # Check cap
+    pending_count = AssignmentRequest.objects.filter(
+        volunteer=request.user, status=AssignmentRequest.STATUS_PENDING
+    ).count()
+    if pending_count >= REQUEST_LIMIT:
+        messages.error(request, f'You can have at most {REQUEST_LIMIT} pending requests at a time.')
+        return redirect('company_browse')
+
+    # Check BBV cap
+    profile = getattr(request.user, 'profile', None)
+    if not getattr(profile, 'bbv_certified', False):
+        if Assignment.objects.filter(volunteer=request.user, status=Assignment.STATUS_ACTIVE).exists():
+            messages.error(request, 'You already have an active assignment. Complete it before requesting another company.')
+            return redirect('company_browse')
+
+    AssignmentRequest.objects.create(volunteer=request.user, company=company)
+    messages.success(request, f'Request submitted for "{company.name}".')
+    return redirect('company_browse')
+
+
+# ---------------------------------------------------------------------------
+# Staff — manage requests
+# ---------------------------------------------------------------------------
+
+@staff_member_required
+def staff_requests(request):
+    pending = (
+        AssignmentRequest.objects
+        .filter(status=AssignmentRequest.STATUS_PENDING)
+        .select_related('volunteer', 'company')
+        .order_by('company__name', 'created_at')
+    )
+    recent_actioned = (
+        AssignmentRequest.objects
+        .exclude(status=AssignmentRequest.STATUS_PENDING)
+        .select_related('volunteer', 'company')
+        .order_by('-created_at')[:20]
+    )
+    return render(request, 'core/staff_requests.html', {
+        'pending':        pending,
+        'recent_actioned': recent_actioned,
+    })
+
+
+@staff_member_required
+def staff_approve_request(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_requests')
+    req = get_object_or_404(AssignmentRequest, pk=pk, status=AssignmentRequest.STATUS_PENDING)
+
+    # Enforce BBV cap
+    profile, _ = UserProfile.objects.get_or_create(user=req.volunteer)
+    if not profile.bbv_certified:
+        active_count = Assignment.objects.filter(
+            volunteer=req.volunteer, status=Assignment.STATUS_ACTIVE
+        ).count()
+        if active_count >= 1:
+            vol_name = req.volunteer.get_full_name() or req.volunteer.username
+            messages.error(request, f'{vol_name} already has an active assignment and is not BBV certified.')
+            return redirect('staff_requests')
+
+    Assignment.objects.create(
+        company=req.company,
+        volunteer=req.volunteer,
+        assigned_by=request.user,
+    )
+    req.company.status = Company.STATUS_ASSIGNED
+    req.company.save(update_fields=['status'])
+
+    req.status = AssignmentRequest.STATUS_APPROVED
+    req.save(update_fields=['status'])
+
+    # Deny all other pending requests for this company
+    AssignmentRequest.objects.filter(
+        company=req.company, status=AssignmentRequest.STATUS_PENDING
+    ).update(status=AssignmentRequest.STATUS_DENIED)
+
+    vol_name = req.volunteer.get_full_name() or req.volunteer.username
+    messages.success(request, f'"{req.company.name}" assigned to {vol_name}.')
+    return redirect('staff_requests')
+
+
+@staff_member_required
+def staff_deny_request(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_requests')
+    req = get_object_or_404(AssignmentRequest, pk=pk, status=AssignmentRequest.STATUS_PENDING)
+    req.status = AssignmentRequest.STATUS_DENIED
+    req.save(update_fields=['status'])
+    vol_name = req.volunteer.get_full_name() or req.volunteer.username
+    messages.success(request, f'Request from {vol_name} for "{req.company.name}" denied.')
+    return redirect('staff_requests')
+
+
+# ---------------------------------------------------------------------------
+# Staff — notices
+# ---------------------------------------------------------------------------
+
+@staff_member_required
+def staff_notices(request):
+    notices = Notice.objects.select_related('created_by').order_by('-created_at')
+    return render(request, 'core/staff_notices.html', {
+        'notices': notices,
+        'now':     timezone.now(),
+    })
+
+
+@staff_member_required
+def staff_notice_form(request, pk=None):
+    notice = get_object_or_404(Notice, pk=pk) if pk else None
+    if request.method == 'POST':
+        form = NoticeForm(request.POST, instance=notice)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            if not pk:
+                obj.created_by = request.user
+            obj.save()
+            messages.success(request, 'Notice saved.')
+            return redirect('staff_notices')
+    else:
+        form = NoticeForm(instance=notice)
+    return render(request, 'core/staff_notice_form.html', {'form': form, 'notice': notice})
+
+
+@staff_member_required
+def staff_notice_delete(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_notices')
+    notice = get_object_or_404(Notice, pk=pk)
+    notice.delete()
+    messages.success(request, 'Notice deleted.')
+    return redirect('staff_notices')
