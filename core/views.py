@@ -864,7 +864,7 @@ def resource_list(request):
 def resource_form(request, pk=None):
     resource = get_object_or_404(Resource, pk=pk) if pk else None
     if request.method == 'POST':
-        form = ResourceForm(request.POST, request.FILES, instance=resource)
+        form = ResourceForm(request.POST, instance=resource)
         if form.is_valid():
             form.save()
             messages.success(request, 'Resource saved.')
@@ -878,8 +878,6 @@ def resource_form(request, pk=None):
 def resource_delete(request, pk):
     resource = get_object_or_404(Resource, pk=pk)
     if request.method == 'POST':
-        if resource.file:
-            resource.file.delete(save=False)
         resource.delete()
         messages.success(request, 'Resource deleted.')
     return redirect('resource_list')

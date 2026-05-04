@@ -357,19 +357,11 @@ class Resource(models.Model):
 
     title       = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    url         = models.URLField(blank=True, help_text='Link to an external document or resource')
-    file        = models.FileField(upload_to='resources/', blank=True, help_text='Upload a file (PDF, Word, etc.)')
+    url         = models.URLField(help_text='OneDrive or other link to the document')
     category    = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='other')
     sort_order  = models.PositiveIntegerField(default=0)
     is_active   = models.BooleanField(default=True)
     created_at  = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def link(self):
-        """Returns the file URL if a file is uploaded, otherwise the external URL."""
-        if self.file:
-            return self.file.url
-        return self.url
 
     class Meta:
         ordering = ['category', 'sort_order', 'title']

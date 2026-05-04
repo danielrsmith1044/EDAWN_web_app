@@ -25,15 +25,10 @@
       {% for resource in items %}
       <div class="list-group-item px-4 py-3 {% if not resource.is_active %}opacity-50{% endif %}">
         <div class="d-flex justify-content-between align-items-start gap-3">
-          <a href="{{ resource.link }}" target="_blank" rel="noopener"
+          <a href="{{ resource.url }}" target="_blank" rel="noopener"
              class="text-decoration-none text-dark flex-grow-1">
             <div class="d-flex align-items-center gap-2">
               <div class="fw-semibold">{{ resource.title }}</div>
-              {% if resource.file %}
-              <span class="badge bg-secondary rounded-pill" style="font-size:.65rem;">
-                <i class="bi bi-paperclip me-1"></i>File
-              </span>
-              {% endif %}
               {% if not resource.is_active %}
               <span class="badge bg-warning text-dark rounded-pill" style="font-size:.65rem;">Hidden</span>
               {% endif %}

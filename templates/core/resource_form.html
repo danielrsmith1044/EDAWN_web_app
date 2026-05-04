@@ -19,12 +19,8 @@
   <div class="col-lg-7">
     <div class="card">
       <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post">
           {% csrf_token %}
-
-          {% if form.non_field_errors %}
-          <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
-          {% endif %}
 
           <div class="mb-3">
             <label class="form-label fw-semibold">{{ form.title.label }} <span class="text-danger">*</span></label>
@@ -33,7 +29,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">{{ form.description.label }} <span class="text-muted fw-normal small">(optional)</span></label>
+            <label class="form-label fw-semibold">Description <span class="text-muted fw-normal small">(optional)</span></label>
             {{ form.description }}
           </div>
 
@@ -42,24 +38,12 @@
             {{ form.category }}
           </div>
 
-          <hr class="my-3">
-          <p class="text-muted small mb-3">Provide either an uploaded file <strong>or</strong> an external URL — at least one is required.</p>
-
           <div class="mb-3">
-            <label class="form-label fw-semibold">Upload File</label>
-            {{ form.file }}
-            <div class="form-text">PDF, Word, Excel, or any document type.</div>
-            {% if form.file.errors %}<div class="text-danger small mt-1">{{ form.file.errors }}</div>{% endif %}
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">External URL</label>
+            <label class="form-label fw-semibold">{{ form.url.label }} <span class="text-danger">*</span></label>
             {{ form.url }}
-            <div class="form-text">e.g. a Google Drive link, website, or shared document.</div>
+            <div class="form-text">Paste your OneDrive sharing link here.</div>
             {% if form.url.errors %}<div class="text-danger small mt-1">{{ form.url.errors }}</div>{% endif %}
           </div>
-
-          <hr class="my-3">
 
           <div class="row g-3 mb-3">
             <div class="col-sm-4">
@@ -76,7 +60,7 @@
             </label>
           </div>
 
-          <div class="d-flex gap-2">
+          <div class="d-flex gap-2 align-items-center">
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check-circle me-1"></i>Save Resource
             </button>
