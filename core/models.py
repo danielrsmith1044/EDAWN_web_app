@@ -32,7 +32,7 @@ class Company(models.Model):
     primary_contact_name  = models.CharField(max_length=100, blank=True)
     primary_contact_title = models.CharField(max_length=100, blank=True)
     notes                 = models.TextField(blank=True, help_text="Internal admin notes")
-    status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNASSIGNED)
+    status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNASSIGNED, db_index=True)
     created_at            = models.DateTimeField(auto_now_add=True)
     updated_at            = models.DateTimeField(auto_now=True)
 
@@ -71,7 +71,7 @@ class Assignment(models.Model):
     assigned_by    = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                        related_name='assignments_given')
     assigned_date  = models.DateTimeField(auto_now_add=True)
-    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)
     completed_date = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -203,7 +203,7 @@ class VisitNote(models.Model):
         from .badges import check_and_award_badges, check_bbv_eligibility
         check_and_award_badges(self.visited_by)
         check_bbv_eligibility(self.visited_by)
-        from django.utils import timezone as _tz
+        # Clear the inactivity flag so the volunteer can be re-alerted if they go inactive again
         UserProfile.objects.filter(user=self.visited_by).update(last_inactivity_notified=None)
         from .emails import notify_staff_visit_submitted
         notify_staff_visit_submitted(self)
@@ -317,7 +317,7 @@ class AssignmentRequest(models.Model):
 
     company   = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='assignment_requests')
     volunteer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assignment_requests')
-    status    = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    status    = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

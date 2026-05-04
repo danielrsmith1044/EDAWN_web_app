@@ -629,6 +629,7 @@ def staff_dashboard(request):
             oldest_active=Min('assignments__assigned_date',
                               filter=Q(assignments__status=Assignment.STATUS_ACTIVE)),
         )
+        # oldest_active guard gives newly-assigned volunteers a 45-day grace period
         .filter(
             Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True),
             oldest_active__lt=cutoff_45,
@@ -1008,6 +1009,7 @@ def staff_export_visits(request):
 # Company browse & assignment requests
 # ---------------------------------------------------------------------------
 
+# Cap enforced at both request time and approval time to prevent race conditions
 REQUEST_LIMIT = 3
 
 @login_required
@@ -1142,7 +1144,7 @@ def staff_approve_request(request, pk):
     req.status = AssignmentRequest.STATUS_APPROVED
     req.save(update_fields=['status'])
 
-    # Deny all other pending requests for this company
+    # Deny all other pending requests for this company — once assigned there is nothing left to approve
     AssignmentRequest.objects.filter(
         company=req.company, status=AssignmentRequest.STATUS_PENDING
     ).update(status=AssignmentRequest.STATUS_DENIED)
