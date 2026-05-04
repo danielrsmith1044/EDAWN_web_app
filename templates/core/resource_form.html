@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{% if resource %}Edit Resource{% else %}Add Resource{% endif %} – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'resource_list' %}">Resources</a></li>
+      <li class="breadcrumb-item active">{% if resource %}Edit{% else %}Add{% endif %}</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold">
+    <i class="bi bi-file-earmark me-2"></i>{% if resource %}Edit Resource{% else %}Add Resource{% endif %}
+  </h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.title.label }} <span class="text-danger">*</span></label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.description.label }} <span class="text-muted fw-normal small">(optional)</span></label>
+            {{ form.description }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.category.label }}</label>
+            {{ form.category }}
+          </div>
+
+          <hr class="my-3">
+          <p class="text-muted small mb-3">Provide either an uploaded file <strong>or</strong> an external URL — at least one is required.</p>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Upload File</label>
+            {{ form.file }}
+            <div class="form-text">PDF, Word, Excel, or any document type.</div>
+            {% if form.file.errors %}<div class="text-danger small mt-1">{{ form.file.errors }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">External URL</label>
+            {{ form.url }}
+            <div class="form-text">e.g. a Google Drive link, website, or shared document.</div>
+            {% if form.url.errors %}<div class="text-danger small mt-1">{{ form.url.errors }}</div>{% endif %}
+          </div>
+
+          <hr class="my-3">
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-4">
+              <label class="form-label fw-semibold">{{ form.sort_order.label }}</label>
+              {{ form.sort_order }}
+              <div class="form-text">Lower numbers appear first.</div>
+            </div>
+          </div>
+
+          <div class="form-check mb-4">
+            {{ form.is_active }}
+            <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+              Active (visible to volunteers)
+            </label>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i>Save Resource
+            </button>
+            <a href="{% url 'resource_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            {% if resource %}
+            <form method="post" action="{% url 'resource_delete' resource.pk %}" class="ms-auto"
+                  onsubmit="return confirm('Delete this resource?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Delete
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

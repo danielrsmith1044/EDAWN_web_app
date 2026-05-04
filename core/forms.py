@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Assignment, AssignmentRequest, Company, ContactAttempt, InviteCode, Notice, VisitNote, Message, Reply
+from .models import Assignment, AssignmentRequest, Company, ContactAttempt, InviteCode, Notice, Resource, VisitNote, Message, Reply
 
 _fc = {'class': 'form-control'}
 _fs = {'class': 'form-select'}
@@ -345,3 +345,23 @@ class VisitExportForm(forms.Form):
             .distinct().order_by('industry')
         )
         self.fields['industry'].choices = [('', 'All industries')] + [(i, i) for i in industries]
+
+
+class ResourceForm(forms.ModelForm):
+    class Meta:
+        model  = Resource
+        fields = ['title', 'description', 'category', 'file', 'url', 'sort_order', 'is_active']
+        widgets = {
+            'title':       forms.TextInput(attrs=_fc),
+            'description': forms.Textarea(attrs={**_fc, 'rows': 3}),
+            'category':    forms.Select(attrs=_fs),
+            'file':        forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'url':         forms.URLInput(attrs=_fc),
+            'sort_order':  forms.NumberInput(attrs=_fc),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get('file') and not cleaned.get('url'):
+            raise forms.ValidationError('Provide either a file upload or an external URL.')
+        return cleaned

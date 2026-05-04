@@ -16,7 +16,7 @@ from django.utils import timezone
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
-                     CompanyCSVUploadForm, VisitExportForm, NoticeForm)
+                     CompanyCSVUploadForm, VisitExportForm, NoticeForm, ResourceForm)
 from .ratelimit import ratelimit
 
 
@@ -852,12 +852,37 @@ def staff_mark_bbv(request, pk):
 
 @login_required
 def resource_list(request):
-    resources = Resource.objects.filter(is_active=True)
+    qs = Resource.objects.all() if request.user.is_staff else Resource.objects.filter(is_active=True)
     grouped = {}
-    for res in resources:
+    for res in qs:
         label = res.get_category_display()
         grouped.setdefault(label, []).append(res)
     return render(request, 'core/resource_list.html', {'grouped': grouped})
+
+
+@staff_member_required
+def resource_form(request, pk=None):
+    resource = get_object_or_404(Resource, pk=pk) if pk else None
+    if request.method == 'POST':
+        form = ResourceForm(request.POST, request.FILES, instance=resource)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Resource saved.')
+            return redirect('resource_list')
+    else:
+        form = ResourceForm(instance=resource)
+    return render(request, 'core/resource_form.html', {'form': form, 'resource': resource})
+
+
+@staff_member_required
+def resource_delete(request, pk):
+    resource = get_object_or_404(Resource, pk=pk)
+    if request.method == 'POST':
+        if resource.file:
+            resource.file.delete(save=False)
+        resource.delete()
+        messages.success(request, 'Resource deleted.')
+    return redirect('resource_list')
 
 
 # ---------------------------------------------------------------------------

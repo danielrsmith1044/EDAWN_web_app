@@ -33,7 +33,10 @@ urlpatterns = [
     path('staff/notices/<int:pk>/delete/', views.staff_notice_delete, name='staff_notice_delete'),
 
     # Resources
-    path('resources/', views.resource_list, name='resource_list'),
+    path('resources/',                   views.resource_list,   name='resource_list'),
+    path('resources/new/',               views.resource_form,   name='resource_add'),
+    path('resources/<int:pk>/edit/',     views.resource_form,   name='resource_edit'),
+    path('resources/<int:pk>/delete/',   views.resource_delete, name='resource_delete'),
 
     # Companies
     path('companies/browse/',    views.company_browse,           name='company_browse'),
