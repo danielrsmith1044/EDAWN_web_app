@@ -69,6 +69,14 @@
           <td>
             <div class="fw-semibold">{{ vol.get_full_name|default:vol.username }}</div>
             <div class="text-muted small">{{ vol.email }}</div>
+            <form method="post" action="{% url 'staff_set_temp_password' vol.pk %}"
+                  style="display:inline;"
+                  onsubmit="return confirm('Set a new temporary password for {{ vol.get_full_name|default:vol.username }}?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-secondary py-0 px-2 mt-1" style="font-size:.7rem;">
+                <i class="bi bi-key me-1"></i>Temp Password
+              </button>
+            </form>
           </td>
           <td class="text-center">
             {% if vol.active_count %}

@@ -1,5 +1,7 @@
 import csv
 import io
+import secrets
+import string
 from datetime import timedelta
 
 from django.conf import settings
@@ -12,6 +14,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
+from django.utils.html import format_html
 
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
@@ -853,6 +856,24 @@ def staff_mark_bbv(request, pk):
             UserBadge.objects.get_or_create(user=volunteer, badge=bbv_badge)
         messages.success(request, f"BBV certification granted to {name}.")
     profile.save(update_fields=['bbv_certified', 'bbv_certified_date'])
+    return redirect('staff_volunteers')
+
+
+@staff_member_required
+def staff_set_temp_password(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_volunteers')
+    volunteer = get_object_or_404(User, pk=pk, is_staff=False)
+    alphabet = string.ascii_letters + string.digits
+    temp_pw = ''.join(secrets.choice(alphabet) for _ in range(10))
+    volunteer.set_password(temp_pw)
+    volunteer.save(update_fields=['password'])
+    name = volunteer.get_full_name() or volunteer.username
+    messages.success(request, format_html(
+        'Temporary password for {}: <strong class="font-monospace fs-5 ms-1">{}</strong>'
+        ' — share this with them and ask them to change it after signing in.',
+        name, temp_pw,
+    ))
     return redirect('staff_volunteers')
 
 
