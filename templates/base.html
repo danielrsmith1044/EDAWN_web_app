@@ -224,6 +224,9 @@
       <a href="{% url 'landing' %}" class="nav-link" style="font-size:.85rem;">
         <i class="bi bi-info-circle"></i> About the Program
       </a>
+      <a href="{% url 'password_change' %}" class="nav-link" style="font-size:.85rem;">
+        <i class="bi bi-key"></i> Change Password
+      </a>
       <form method="post" action="{% url 'logout' %}" style="margin:0;">
         {% csrf_token %}
         <button type="submit" class="nav-link" style="background:none; border:none; width:100%; text-align:left; cursor:pointer;">
