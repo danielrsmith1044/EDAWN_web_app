@@ -211,6 +211,9 @@
       <a href="{% url 'staff_notices' %}" class="nav-link {% if 'notice' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-megaphone"></i> Notices
       </a>
+      <a href="{% url 'staff_guide' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_guide' %}active{% endif %}" target="_blank">
+        <i class="bi bi-book"></i> Staff Guide
+      </a>
       <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.1)">
       <a href="{% url 'admin:index' %}" class="nav-link" style="opacity:.6; font-size:.85rem;">
         <i class="bi bi-shield-lock"></i> Django Admin

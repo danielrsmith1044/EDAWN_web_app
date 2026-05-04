@@ -32,6 +32,7 @@ urlpatterns = [
     path('staff/notices/new/',           views.staff_notice_form,   name='staff_notice_create'),
     path('staff/notices/<int:pk>/edit/', views.staff_notice_form,   name='staff_notice_edit'),
     path('staff/notices/<int:pk>/delete/', views.staff_notice_delete, name='staff_notice_delete'),
+    path('staff/guide/',                   views.staff_guide,          name='staff_guide'),
 
     # Resources
     path('resources/',                   views.resource_list,   name='resource_list'),

@@ -1204,3 +1204,8 @@ def staff_notice_delete(request, pk):
     notice.delete()
     messages.success(request, 'Notice deleted.')
     return redirect('staff_notices')
+
+
+@staff_member_required
+def staff_guide(request):
+    return render(request, 'core/staff_guide.html')
