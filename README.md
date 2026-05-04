@@ -26,7 +26,7 @@ A volunteer management web app for the Economic Development Authority of Western
 
 ## Tech Stack
 
-- Python 3.12 / Django 5
+- Python 3.12 / Django 5.2 LTS
 - PostgreSQL (production via Render), SQLite (local dev)
 - Bootstrap 5.3 + Bootstrap Icons (CDN)
 - No JavaScript frameworks — server-rendered templates
