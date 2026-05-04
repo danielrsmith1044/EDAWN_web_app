@@ -425,11 +425,6 @@ def edit_visit_note(request, pk, note_pk):
 @login_required
 def badge_list(request):
     all_badges = Badge.objects.all()
-    earned_ids = set(
-        UserBadge.objects
-        .filter(user=request.user)
-        .values_list('badge_id', flat=True)
-    )
     earned_map = {
         ub.badge_id: ub.earned_at
         for ub in UserBadge.objects.filter(user=request.user)
@@ -438,12 +433,12 @@ def badge_list(request):
     for badge in all_badges:
         badges.append({
             'badge': badge,
-            'earned': badge.pk in earned_ids,
+            'earned': badge.pk in earned_map,
             'earned_at': earned_map.get(badge.pk),
         })
     context = {
         'badges': badges,
-        'earned_count': len(earned_ids),
+        'earned_count': len(earned_map),
         'total_count': len(all_badges),
     }
     return render(request, 'core/badge_list.html', context)
@@ -712,6 +707,15 @@ def staff_volunteers(request):
             completed_count__gt=0,
         )
 
+    volunteers = list(volunteers)
+    for vol in volunteers:
+        vol.is_overdue = (
+            bool(vol.active_count)
+            and vol.oldest_active is not None
+            and vol.oldest_active < cutoff_45
+            and (vol.last_visit is None or vol.last_visit < cutoff_45)
+        )
+
     context = {
         'volunteers':        volunteers,
         'status_filter':     status_filter,
@@ -902,7 +906,8 @@ def resource_form(request, pk=None):
             return redirect('resource_list')
     else:
         form = ResourceForm(instance=resource)
-    return render(request, 'core/resource_form.html', {'form': form, 'resource': resource})
+    action_label = 'Edit Resource' if resource else 'Add Resource'
+    return render(request, 'core/resource_form.html', {'form': form, 'resource': resource, 'action_label': action_label})
 
 
 @staff_member_required

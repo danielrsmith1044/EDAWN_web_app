@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
-from django.db.models import Max, Q
+from django.db.models import Max, Prefetch, Q
 from django.utils import timezone
 
 from core.emails import notify_staff_volunteer_overdue, notify_volunteer_inactivity
@@ -17,6 +17,12 @@ class Command(BaseCommand):
         cutoff_30 = now - timedelta(days=30)
         cutoff_45 = now - timedelta(days=45)
 
+        active_assignments_qs = (
+            Assignment.objects
+            .filter(status=Assignment.STATUS_ACTIVE)
+            .select_related('company')
+        )
+
         # Volunteers with at least one active assignment, annotated with last visit
         candidates = (
             User.objects
@@ -25,6 +31,9 @@ class Command(BaseCommand):
             .filter(Q(last_visit__lt=cutoff_30) | Q(last_visit__isnull=True))
             .distinct()
             .select_related('profile')
+            .prefetch_related(
+                Prefetch('assignments', queryset=active_assignments_qs, to_attr='active_assignments')
+            )
         )
 
         reminded = 0
@@ -34,28 +43,23 @@ class Command(BaseCommand):
             if not vol.email:
                 continue
 
-            active = list(
-                Assignment.objects
-                .filter(volunteer=vol, status=Assignment.STATUS_ACTIVE)
-                .select_related('company')
-            )
+            active = vol.active_assignments
 
             if vol.last_visit:
                 days_inactive = (now - vol.last_visit).days
+            elif active:
+                days_inactive = (now - min(a.assigned_date for a in active)).days
             else:
-                first = Assignment.objects.filter(volunteer=vol).order_by('assigned_date').first()
-                days_inactive = (now - first.assigned_date).days if first else 0
+                continue
 
             # F-15: remind the volunteer at 30+ days
             notify_volunteer_inactivity(vol, active, days_inactive)
             reminded += 1
 
-            # F-16: alert staff at 45+ days, but only once per inactive period
+            # F-16: alert staff at 45+ days, only once per inactive period
             if days_inactive >= 45:
                 profile = getattr(vol, 'profile', None)
-                if profile is None:
-                    profile, _ = UserProfile.objects.get_or_create(user=vol)
-                if not profile.last_inactivity_notified:
+                if profile and not profile.last_inactivity_notified:
                     notify_staff_volunteer_overdue(vol, days_inactive)
                     profile.last_inactivity_notified = now
                     profile.save(update_fields=['last_inactivity_notified'])

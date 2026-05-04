@@ -69,7 +69,6 @@ class ContactAttemptForm(forms.ModelForm):
 
 
 class CompanyContactUpdateForm(forms.ModelForm):
-    """Prefilled from the Company record; saved back on visit submission."""
     class Meta:
         model  = Company
         fields = ('primary_contact_name', 'primary_contact_title', 'phone', 'email')

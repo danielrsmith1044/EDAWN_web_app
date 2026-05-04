@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}{% if resource %}Edit Resource{% else %}Add Resource{% endif %} – EDAWN{% endblock %}
+{% block title %}{{ action_label }} – EDAWN{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb mb-1">
       <li class="breadcrumb-item"><a href="{% url 'resource_list' %}">Resources</a></li>
-      <li class="breadcrumb-item active">{% if resource %}Edit{% else %}Add{% endif %}</li>
+      <li class="breadcrumb-item active">{{ action_label }}</li>
     </ol>
   </nav>
   <h4 class="mb-0 fw-bold">
-    <i class="bi bi-file-earmark me-2"></i>{% if resource %}Edit Resource{% else %}Add Resource{% endif %}
+    <i class="bi bi-file-earmark me-2"></i>{{ action_label }}
   </h4>
 </div>
 

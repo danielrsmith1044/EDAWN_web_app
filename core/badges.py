@@ -6,22 +6,15 @@ def check_and_award_badges(user):
         UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
     )
 
+    from django.db.models import Count, Q as _Q
+    assignment_stats = Assignment.objects.filter(volunteer=user).aggregate(
+        visits_completed=Count('pk', filter=_Q(status=Assignment.STATUS_COMPLETED)),
+        assignments_received=Count('pk'),
+    )
     stats = {
-        'visits_completed': (
-            Assignment.objects
-            .filter(volunteer=user, status=Assignment.STATUS_COMPLETED)
-            .count()
-        ),
-        'contact_attempts': (
-            ContactAttempt.objects
-            .filter(attempted_by=user)
-            .count()
-        ),
-        'assignments_received': (
-            Assignment.objects
-            .filter(volunteer=user)
-            .count()
-        ),
+        'visits_completed':    assignment_stats['visits_completed'],
+        'contact_attempts':    ContactAttempt.objects.filter(attempted_by=user).count(),
+        'assignments_received': assignment_stats['assignments_received'],
     }
 
     auto_badges = Badge.objects.exclude(criteria_type='manual').exclude(criteria_value=0)
