@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## About the Project
 
-EDAWN Business Builders Portal — a Django web app for managing volunteer outreach to businesses in Northern Nevada. Volunteers are assigned companies, log contact attempts and visits, and earn badges for milestones. Staff admins manage companies, assignments, and user accounts.
+EDAWN Business Builders Portal — a Django web app for managing volunteer outreach to businesses in Northern Nevada. Volunteers are assigned companies, log contact attempts and visits, and earn badges for milestones. Staff admins manage companies, assignments, volunteer accounts, and post notices to the volunteer dashboard.
 
 ## Commands
 
@@ -57,18 +57,26 @@ There are no tests — `core/tests.py` is empty.
 
 **Stack:** Django 5 / Python 3.12, server-rendered templates, Bootstrap 5.3 (CDN), no JS framework. Deployed on Render with PostgreSQL + WhiteNoise for static files.
 
-**Template layout:** All authenticated pages extend `templates/base.html`, which renders the sidebar, flash messages, and the `{% block content %}` area. Unauthenticated pages (login, register) use `{% block auth_content %}` — a plain centered container with no sidebar. The public landing page (`templates/core/landing.html`) is a fully standalone HTML document that does not extend `base.html`.
+**Template layout:** All authenticated pages extend `templates/base.html`, which renders the sidebar, flash messages, and the `{% block content %}` area. Unauthenticated pages (login, password reset) use `{% block auth_content %}` — a plain centered container with no sidebar. The public landing page (`templates/core/landing.html`) is a fully standalone HTML document that does not extend `base.html`.
 
 **URL layout:**
-- `/` → dashboard (login required)
+- `/` → volunteer dashboard (login required)
 - `/about/` → public landing page
 - `/login/`, `/register/`, `/logout/` → auth
-- `/companies/`, `/companies/<id>/`, `/companies/<id>/contact/`, `/companies/<id>/visit/` → volunteer workflows
-- `/badges/`, `/leaderboard/`, `/messages/` → engagement features
-- `/admin-actions/*` → staff-only quick actions (add company, assign, invite, create-admin)
+- `/password-reset/`, `/password-change/` → password management
+- `/companies/` → volunteer company list and detail
+- `/companies/browse/` → browse unassigned companies and request assignment
+- `/companies/<id>/contact/`, `/companies/<id>/visit/` → volunteer workflows
+- `/badges/`, `/leaderboard/`, `/messages/`, `/resources/` → engagement and reference
+- `/staff/` → staff dashboard
+- `/staff/volunteers/` → volunteer roster with training/BBV/temp-password controls
+- `/staff/requests/` → approve or deny company assignment requests
+- `/staff/notices/` → create and manage notices shown on volunteer dashboards
+- `/staff/assign/`, `/staff/add-company/`, `/staff/invite/`, `/staff/import/` → staff quick actions
+- `/staff/export/` → CSV export of visit data
 - `/admin/` → Django admin
 
-**Access control:** `@login_required` on all volunteer views. `@staff_member_required` on all `/admin-actions/` views. Private messages are filtered in the view: `is_private=True` messages are visible only to the sender and staff.
+**Access control:** `@login_required` on all volunteer views. `@staff_member_required` on all `/staff/` views. Private messages are filtered in the view: `is_private=True` messages are visible only to the sender, the `recipient` (if set), and staff.
 
 ## Core Data Model
 
@@ -80,21 +88,39 @@ The central entity is **Assignment** — it links a **Company** to a volunteer (
 **Status lifecycles are driven by model `save()` hooks, not views:**
 
 - `ContactAttempt.save()` — after 3 attempts on an active assignment, auto-sets `assignment.status = LOST` and `company.status = LOST`, then calls `check_and_award_badges(user)`.
-- `VisitNote.save()` — auto-sets `assignment.status = COMPLETED`, `company.status = VISITED`, `assignment.completed_date = now()`, then calls `check_and_award_badges(user)`.
+- `VisitNote.save()` — auto-sets `assignment.status = COMPLETED`, `company.status = VISITED`, `assignment.completed_date = now()`, resets `profile.last_inactivity_notified`, and calls `check_and_award_badges(user)`.
 
 Company status flow: `unassigned → assigned → visited / lost`
 Assignment status flow: `active → completed / lost`
 
-**Badge awarding** (`core/badges.py` → `check_and_award_badges(user)`): called from the two save hooks above. Compares the user's current stats (visits completed, contact attempts, assignments received) against all non-manual Badge thresholds. Creates a `UserBadge` record and posts a public `Message` announcement for each newly earned badge. `criteria_value = 0` means manual-award only.
+**Supporting models:**
 
-**Registration** is invite-code gated. `RegisterForm.clean_invite_code()` validates the code and stores the `InviteCode` object as `self._invite`; `RegisterForm.save()` marks it consumed by setting `used_by` and `used_at`.
+- **AssignmentRequest** — a volunteer's request to be assigned an unassigned company. Capped at 3 pending requests per volunteer (non-BBV volunteers with an active assignment are blocked). Approving one auto-denies all competing requests for the same company. `unique_together = ('company', 'volunteer')`.
+- **Notice** — a staff-authored announcement displayed as an alert banner on all volunteer dashboards. Requires an `expires_at` datetime; disappears automatically after expiry.
+- **Resource** — a titled link (OneDrive or other URL) in a named category, visible to all volunteers on the Resources page. Staff manage these from the same page.
+- **UserProfile** — one-to-one with User (created by post_save signal). Stores `bbv_certified`, `training_completed`, `last_inactivity_notified`.
+- **Badge / UserBadge** — milestone achievements. Auto-awarded by `check_and_award_badges(user)` on contact/visit save. `criteria_value = 0` means manual-award only.
+- **InviteCode** — single-use registration tokens. `RegisterForm` validates and consumes the code on save.
+- **Message / Reply** — group board (`is_private=False`) or direct message to staff (`is_private=True`). Staff can send broadcast messages to all volunteers or filtered subsets by industry. `Message.recipient` (nullable FK) identifies the target for direct messages.
 
-**Messaging:** `Message.is_private=False` is a group discussion board; `is_private=True` is a direct message to admins. The `message_list` view filters private messages to sender + staff only.
+**Badge awarding** (`core/badges.py`): `check_and_award_badges(user)` runs two queries (one aggregate on Assignment, one count on ContactAttempt) and awards any threshold badges not yet earned. `check_bbv_eligibility(user)` checks whether the volunteer visited in each of the last 3 calendar months using a single filtered query.
 
 ## Rate Limiting
 
 `core/ratelimit.py` provides a `@ratelimit(max_attempts, window, key_prefix)` decorator that tracks POST requests per client IP via Django's cache. Returns HTTP 403 on breach. Applied to: login (5/5min), register (5/5min), message_create (10/5min).
 
+## Email Notifications
+
+`core/emails.py` contains three helpers — all use `fail_silently=True` and are no-ops when `RESEND_API_KEY` is unset:
+
+- `notify_volunteer_inactivity(volunteer, active_assignments, days)` — F-15, sent by cron job
+- `notify_staff_volunteer_overdue(volunteer, days)` — F-16, sent by cron job, once per inactive period (guarded by `profile.last_inactivity_notified`)
+- `notify_staff_visit_submitted(visit_note)` — F-17, called from `VisitNote.save()`
+
+The cron job (`send_inactivity_reminders`) should run daily on Render. It uses `Prefetch` to avoid N+1 queries across volunteers.
+
 ## Deployment
 
 Render runs `./build.sh` on deploy (install → collectstatic → migrate → create superuser). Static files are served by WhiteNoise. `DEBUG=False` enables HSTS, SSL redirect, and secure cookies automatically via `settings.py`.
+
+Password reset emails require `RESEND_API_KEY`. Until that is configured, staff can issue temporary passwords directly from the volunteer roster page.
