@@ -626,8 +626,15 @@ def staff_dashboard(request):
     overdue_volunteers = list(
         User.objects
         .filter(is_active=True, is_staff=False, assignments__status=Assignment.STATUS_ACTIVE)
-        .annotate(last_visit=Max('assignments__visit_notes__visit_date'))
-        .filter(Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True))
+        .annotate(
+            last_visit=Max('assignments__visit_notes__visit_date'),
+            oldest_active=Min('assignments__assigned_date',
+                              filter=Q(assignments__status=Assignment.STATUS_ACTIVE)),
+        )
+        .filter(
+            Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True),
+            oldest_active__lt=cutoff_45,
+        )
         .distinct()
         .order_by('first_name', 'last_name')[:8]
     )
@@ -665,6 +672,8 @@ def staff_volunteers(request):
         .annotate(
             last_visit=Max('assignments__visit_notes__visit_date'),
             first_assignment=Min('assignments__assigned_date'),
+            oldest_active=Min('assignments__assigned_date',
+                              filter=Q(assignments__status=Assignment.STATUS_ACTIVE)),
             active_count=Count(
                 'assignments',
                 filter=Q(assignments__status=Assignment.STATUS_ACTIVE),
@@ -686,7 +695,8 @@ def staff_volunteers(request):
 
     if status_filter == 'overdue':
         volunteers = volunteers.filter(
-            active_count__gt=0
+            active_count__gt=0,
+            oldest_active__lt=cutoff_45,
         ).filter(Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True))
     elif status_filter == 'active':
         volunteers = volunteers.filter(active_count__gt=0)

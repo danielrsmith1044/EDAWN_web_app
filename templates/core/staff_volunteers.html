@@ -142,7 +142,7 @@
           </td>
           <td>
             {% if vol.active_count %}
-              {% if not vol.last_visit or vol.last_visit < cutoff_45 %}
+              {% if vol.oldest_active < cutoff_45 and not vol.last_visit or vol.oldest_active < cutoff_45 and vol.last_visit < cutoff_45 %}
                 <span class="badge bg-danger rounded-pill"
                       data-bs-toggle="tooltip"
                       data-bs-title="Has an active assignment but no visit logged in the past 45 days">Overdue</span>
