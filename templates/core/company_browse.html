@@ -33,7 +33,7 @@
       <span class="text-muted small me-1">Industry:</span>
       <a href="?" class="btn btn-sm {% if not industry_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">All</a>
       {% for ind in industries %}
-      <a href="?industry={{ ind }}"
+      <a href="?industry={{ ind|urlencode }}"
          class="btn btn-sm {% if industry_filter == ind %}btn-primary{% else %}btn-outline-secondary{% endif %}">
         {{ ind }}
       </a>
