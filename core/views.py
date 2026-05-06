@@ -1211,6 +1211,23 @@ def staff_guide(request):
     return render(request, 'core/staff_guide.html')
 
 
+@staff_member_required
+def staff_reopen_assignment(request, pk):
+    if request.method != 'POST':
+        return redirect('company_detail', pk=pk)
+    assignment = get_object_or_404(Assignment, pk=pk)
+    if assignment.status != Assignment.STATUS_LOST:
+        messages.error(request, "Only lost assignments can be reopened.")
+        return redirect('company_detail', pk=pk)
+    assignment.contact_attempts.all().delete()
+    assignment.status = Assignment.STATUS_ACTIVE
+    assignment.save(update_fields=['status'])
+    assignment.company.status = Company.STATUS_ASSIGNED
+    assignment.company.save(update_fields=['status'])
+    messages.success(request, f'"{assignment.company.name}" has been reopened and assigned back to {assignment.volunteer.get_full_name() or assignment.volunteer.username}.')
+    return redirect('company_detail', pk=pk)
+
+
 @login_required
 def volunteer_guide(request):
     return render(request, 'core/volunteer_guide.html')
