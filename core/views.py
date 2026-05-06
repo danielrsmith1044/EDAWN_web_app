@@ -1125,3 +1125,8 @@ def staff_notice_delete(request, pk):
 @staff_member_required
 def staff_guide(request):
     return render(request, 'core/staff_guide.html')
+
+
+@login_required
+def volunteer_guide(request):
+    return render(request, 'core/volunteer_guide.html')
