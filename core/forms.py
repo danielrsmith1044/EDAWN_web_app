@@ -238,13 +238,15 @@ class CreateAdminForm(UserCreationForm):
 class QuickCompanyForm(forms.ModelForm):
     class Meta:
         model  = Company
-        fields = ('name', 'industry', 'city', 'state', 'phone', 'email',
+        fields = ('name', 'industry', 'address', 'city', 'state', 'zip_code', 'phone', 'email',
                   'primary_contact_name')
         widgets = {
             'name':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Company name'}),
             'industry':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Industry'}),
+            'address':              forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Street address'}),
             'city':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}),
             'state':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'State'}),
+            'zip_code':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Zip code'}),
             'phone':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}),
             'email':                forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
             'primary_contact_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact name'}),
