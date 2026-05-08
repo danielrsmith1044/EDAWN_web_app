@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}My Account – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h4><i class="bi bi-person-circle me-2"></i>My Account</h4>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+
+    <div class="card mb-4">
+      <div class="card-header">Profile Information</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">First Name</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+              <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Last Name</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+              <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email Address</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+              <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Password</div>
+      <div class="card-body">
+        <p class="text-muted mb-3">Use a strong password you don't use elsewhere.</p>
+        <a href="{% url 'password_change' %}" class="btn btn-outline-primary">Change Password</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
