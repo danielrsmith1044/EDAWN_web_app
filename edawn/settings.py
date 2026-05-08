@@ -183,6 +183,31 @@ DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'EDAWN Business Build
 
 
 # ---------------------------------------------------------------------------
+# Logging — always output Django request errors to the console so Render
+# captures them in its log stream even when DEBUG is False.
+# ---------------------------------------------------------------------------
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
+
+# ---------------------------------------------------------------------------
 # Production security — enforced when DEBUG is False
 # ---------------------------------------------------------------------------
 if not DEBUG:
