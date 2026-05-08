@@ -150,7 +150,7 @@ def quick_add_company(request):
         if form.is_valid():
             company = form.save()
             messages.success(request, f'Company "{company.name}" added.')
-            return redirect('quick_add_company')
+            return redirect('staff_add_company')
     else:
         form = QuickCompanyForm()
     recent = Company.objects.order_by('-created_at')[:5]
