@@ -21,8 +21,10 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"
+        value: ".onrender.com,businessbuilders.edawn.org"
       - key: CSRF_TRUSTED_ORIGINS
-        value: "https://*.onrender.com"
+        value: "https://*.onrender.com,https://businessbuilders.edawn.org"
+      - key: SITE_URL
+        value: "https://businessbuilders.edawn.org"
       - key: PYTHON_VERSION
         value: "3.12.3"
