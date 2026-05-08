@@ -17,7 +17,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
-from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
+from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
                      CompanyCSVUploadForm, VisitExportForm, NoticeForm, ResourceForm)
 from .ratelimit import ratelimit
@@ -416,6 +416,23 @@ def edit_visit_note(request, pk, note_pk):
         'editing':      True,
         'note':         note,
     })
+
+
+# ---------------------------------------------------------------------------
+# Account
+# ---------------------------------------------------------------------------
+
+@login_required
+def account(request):
+    if request.method == 'POST':
+        form = AccountForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your account has been updated.')
+            return redirect('account')
+    else:
+        form = AccountForm(instance=request.user)
+    return render(request, 'core/account.html', {'form': form})
 
 
 # ---------------------------------------------------------------------------
