@@ -68,6 +68,7 @@ def _lookup_account_id(instance_url, token, company_name):
 def sync_visit_to_salesforce(visit_note):
     """Create a Salesforce Case for a completed volunteer visit. Fails silently if unconfigured."""
     if not getattr(settings, 'SF_CLIENT_ID', ''):
+        logger.warning("Salesforce sync skipped: SF_CLIENT_ID is not set")
         return
 
     try:
