@@ -22,8 +22,9 @@ def _get_access_token():
     if not client_id or not client_secret:
         return None, None
 
-    login_url = getattr(settings, 'SF_LOGIN_URL', _DEFAULT_LOGIN_URL).rstrip('/')
+    login_url = (getattr(settings, 'SF_LOGIN_URL', '') or _DEFAULT_LOGIN_URL).rstrip('/')
     token_url = f"{login_url}/services/oauth2/token"
+    logger.warning("Salesforce token request to: %s", login_url)
 
     data = urllib.parse.urlencode({
         'grant_type': 'client_credentials',
