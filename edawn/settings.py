@@ -187,7 +187,7 @@ DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'EDAWN Business Build
 # ---------------------------------------------------------------------------
 SF_CLIENT_ID     = os.environ.get('SF_CLIENT_ID', '')
 SF_CLIENT_SECRET = os.environ.get('SF_CLIENT_SECRET', '')
-SF_LOGIN_URL     = os.environ.get('SF_LOGIN_URL', '')  # e.g. https://edawn.my.salesforce.com
+SF_LOGIN_URL     = os.environ.get('SF_INSTANCE_URL', os.environ.get('SF_LOGIN_URL', ''))
 
 
 # ---------------------------------------------------------------------------
