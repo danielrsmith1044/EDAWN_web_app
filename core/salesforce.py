@@ -8,7 +8,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
+_DEFAULT_LOGIN_URL = 'https://login.salesforce.com'
 _API_VERSION = 'v59.0'
 
 
@@ -22,13 +22,16 @@ def _get_access_token():
     if not client_id or not client_secret:
         return None, None
 
+    login_url = getattr(settings, 'SF_LOGIN_URL', _DEFAULT_LOGIN_URL).rstrip('/')
+    token_url = f"{login_url}/services/oauth2/token"
+
     data = urllib.parse.urlencode({
         'grant_type': 'client_credentials',
         'client_id': client_id,
         'client_secret': client_secret,
     }).encode()
 
-    req = urllib.request.Request(_TOKEN_URL, data=data, method='POST')
+    req = urllib.request.Request(token_url, data=data, method='POST')
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             body = json.loads(resp.read())
