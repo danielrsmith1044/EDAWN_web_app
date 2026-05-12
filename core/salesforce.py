@@ -65,6 +65,34 @@ def _lookup_account_id(instance_url, token, company_name):
     return records[0]['Id'] if records else None
 
 
+def _create_case_stripping_fls_blocks(url, token, case):
+    """POST a Case, automatically retrying without any FLS-blocked fields."""
+    import json as _json
+    blocked = []
+    for _ in range(10):
+        try:
+            _api_request('POST', url, token, case)
+            if blocked:
+                logger.warning("Case created without FLS-restricted fields: %s", blocked)
+            return
+        except RuntimeError as exc:
+            msg = str(exc)
+            if 'INVALID_FIELD_FOR_INSERT_UPDATE' not in msg:
+                raise
+            try:
+                start = msg.index('[{')
+                errors = _json.loads(msg[start:msg.rindex(']') + 1])
+                fields = [f for e in errors for f in e.get('fields', [])]
+            except Exception:
+                raise exc
+            if not fields:
+                raise
+            for f in fields:
+                case.pop(f, None)
+            blocked.extend(fields)
+    raise RuntimeError("Gave up creating Case after stripping blocked fields: %s" % blocked)
+
+
 def sync_visit_to_salesforce(visit_note):
     """Create a Salesforce Case for a completed volunteer visit. Fails silently if unconfigured."""
     if not getattr(settings, 'SF_CLIENT_ID', ''):
@@ -152,17 +180,7 @@ def sync_visit_to_salesforce(visit_note):
             case['Current_Issues__c'] = '\n'.join(expansion_flags)
 
         case_url = f"{instance_url}/services/data/{_API_VERSION}/sobjects/Case/"
-        try:
-            _api_request('POST', case_url, token, case)
-        except RuntimeError as exc:
-            if 'AccountId' in str(exc) and 'INVALID_FIELD_FOR_INSERT_UPDATE' in str(exc):
-                # Run As user lacks FLS edit on AccountId — retry without it.
-                # Fix: Setup → Object Manager → Case → Fields → Account ID → Set Field-Level Security
-                logger.warning("AccountId FLS not set; creating Case without account link")
-                case.pop('AccountId', None)
-                _api_request('POST', case_url, token, case)
-            else:
-                raise
+        _create_case_stripping_fls_blocks(case_url, token, case)
 
     except Exception:
         logger.exception("Failed to sync visit note %s to Salesforce", visit_note.pk)
