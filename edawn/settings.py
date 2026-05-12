@@ -182,6 +182,12 @@ EMAIL_HOST_USER    = 'resend'
 EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'EDAWN Business Builders <noreply@edawn.org>')
 
+# ---------------------------------------------------------------------------
+# Salesforce — Client Credentials OAuth2
+# ---------------------------------------------------------------------------
+SF_CLIENT_ID     = os.environ.get('SF_CLIENT_ID', '')
+SF_CLIENT_SECRET = os.environ.get('SF_CLIENT_SECRET', '')
+
 
 # ---------------------------------------------------------------------------
 # Logging — always output Django request errors to the console so Render

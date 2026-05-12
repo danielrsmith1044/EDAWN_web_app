@@ -207,6 +207,8 @@ class VisitNote(models.Model):
         UserProfile.objects.filter(user=self.visited_by).update(last_inactivity_notified=None)
         from .emails import notify_staff_visit_submitted
         notify_staff_visit_submitted(self)
+        from .salesforce import sync_visit_to_salesforce
+        sync_visit_to_salesforce(self)
 
 
 class Badge(models.Model):
