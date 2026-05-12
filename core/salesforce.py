@@ -127,6 +127,7 @@ def sync_visit_to_salesforce(visit_note):
 
         if account_id:
             case['AccountId'] = account_id
+        case['SuppliedCompany'] = company.name[:80]
 
         if visit_note.employee_count is not None:
             case['Current_Number_of_Employees__c'] = visit_note.employee_count
@@ -149,8 +150,18 @@ def sync_visit_to_salesforce(visit_note):
         if expansion_flags:
             case['Current_Issues__c'] = '\n'.join(expansion_flags)
 
-        url = f"{instance_url}/services/data/{_API_VERSION}/sobjects/Case/"
-        _api_request('POST', url, token, case)
+        case_url = f"{instance_url}/services/data/{_API_VERSION}/sobjects/Case/"
+        try:
+            _api_request('POST', case_url, token, case)
+        except RuntimeError as exc:
+            if 'AccountId' in str(exc) and 'INVALID_FIELD_FOR_INSERT_UPDATE' in str(exc):
+                # Run As user lacks FLS edit on AccountId — retry without it.
+                # Fix: Setup → Object Manager → Case → Fields → Account ID → Set Field-Level Security
+                logger.warning("AccountId FLS not set; creating Case without account link")
+                case.pop('AccountId', None)
+                _api_request('POST', case_url, token, case)
+            else:
+                raise
 
     except Exception:
         logger.exception("Failed to sync visit note %s to Salesforce", visit_note.pk)
