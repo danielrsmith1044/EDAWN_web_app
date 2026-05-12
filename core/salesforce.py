@@ -29,8 +29,12 @@ def _get_access_token():
     }).encode()
 
     req = urllib.request.Request(_TOKEN_URL, data=data, method='POST')
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        body = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode('utf-8', errors='replace')
+        raise RuntimeError(f"Salesforce token request failed ({exc.code}): {error_body}") from exc
     return body['access_token'], body['instance_url']
 
 
