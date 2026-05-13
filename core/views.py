@@ -16,6 +16,7 @@ from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 from django.utils.html import format_html
 
+from .emails import notify_invite
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
@@ -219,13 +220,25 @@ def create_admin(request):
 @staff_member_required
 def quick_invite(request):
     invite_link = None
+    emailed_to = None
+    email_error = None
     if request.method == 'POST':
         invite = InviteCode.objects.create(created_by=request.user)
         invite_link = request.build_absolute_uri(f'/register/?invite={invite.code}')
+        email = request.POST.get('email', '').strip()
+        if email:
+            try:
+                notify_invite(email, invite_link)
+                emailed_to = email
+                invite_link = None  # hide link — it was sent by email
+            except Exception:
+                email_error = f'Invite created but email to {email} failed. Copy the link below instead.'
     available = InviteCode.objects.filter(used_by__isnull=True).select_related('created_by')[:10]
     return render(request, 'core/admin_invite.html', {
-        'invite_link':          invite_link,
-        'available':            available,
+        'invite_link':           invite_link,
+        'emailed_to':            emailed_to,
+        'email_error':           email_error,
+        'available':             available,
         'training_calendar_url': settings.TRAINING_CALENDAR_URL,
     })
 

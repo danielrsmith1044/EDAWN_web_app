@@ -16,7 +16,7 @@
         <form method="post">
           {% csrf_token %}
           {% for field in form %}
-          <div class="mb-3">
+          <div class="mb-3{% if field.html_name == 'invite_code' and field.value %} d-none{% endif %}">
             <label class="form-label fw-semibold">{{ field.label }}</label>
             <input
               type="{{ field.field.widget.input_type }}"

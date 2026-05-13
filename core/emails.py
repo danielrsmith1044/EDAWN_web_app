@@ -75,6 +75,24 @@ def notify_staff_visit_submitted(visit_note):
     )
 
 
+def notify_invite(email, invite_link):
+    """Send a registration invite link directly to a prospective volunteer."""
+    send_mail(
+        subject='You\'ve been invited to EDAWN Business Builders',
+        message=(
+            f"You've been invited to join the EDAWN Business Builders volunteer portal.\n\n"
+            f"Click the link below to create your account:\n"
+            f"{invite_link}\n\n"
+            f"This link can only be used once. If you have any questions, "
+            f"contact kim.yaegar@edawn.org.\n\n"
+            f"— EDAWN Business Builders"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[email],
+        fail_silently=False,
+    )
+
+
 def _staff_emails():
     from django.contrib.auth.models import User
     return list(
