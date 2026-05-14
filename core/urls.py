@@ -27,6 +27,7 @@ urlpatterns = [
     path('staff/assign/',      views.quick_assign,      name='staff_assign'),
     path('staff/invite/',      views.quick_invite,      name='staff_invite'),
     path('staff/create-admin/', views.create_admin,          name='staff_create_admin'),
+    path('staff/admins/<int:pk>/remove/', views.remove_admin, name='staff_remove_admin'),
     path('staff/export/',       views.staff_export_visits,   name='staff_export_visits'),
     path('staff/requests/',     views.staff_requests,        name='staff_requests'),
     path('staff/requests/<int:pk>/approve/', views.staff_approve_request, name='staff_approve_request'),

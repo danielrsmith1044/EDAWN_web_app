@@ -251,6 +251,29 @@ def create_admin(request):
     return render(request, 'core/admin_create_admin.html', {'form': form, 'admins': admins})
 
 
+@login_required
+def remove_admin(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Only superusers can remove admin accounts.")
+        return redirect('staff_create_admin')
+
+    target = get_object_or_404(User, pk=pk, is_staff=True)
+
+    if target == request.user:
+        messages.error(request, "You cannot remove your own admin account.")
+        return redirect('staff_create_admin')
+
+    if request.method == 'POST':
+        name = target.get_full_name() or target.username
+        target.is_staff = False
+        target.is_superuser = False
+        target.save(update_fields=['is_staff', 'is_superuser'])
+        messages.success(request, f"Admin account for {name} has been removed.")
+        return redirect('staff_create_admin')
+
+    return render(request, 'core/admin_remove_confirm.html', {'target': target})
+
+
 @staff_member_required
 def quick_invite(request):
     invite_link = None

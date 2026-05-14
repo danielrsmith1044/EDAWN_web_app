@@ -93,11 +93,19 @@
                 </div>
                 <div class="text-muted small text-truncate">@{{ admin.username }}</div>
               </div>
-              <div>
+              <div class="d-flex align-items-center gap-2">
                 {% if admin.is_superuser %}
                   <span class="badge" style="background:var(--edawn-blue); font-size:.7rem;">Superuser</span>
                 {% else %}
                   <span class="badge" style="background:var(--edawn-teal); font-size:.7rem;">Admin</span>
+                {% endif %}
+                {% if request.user.is_superuser and admin != request.user %}
+                  <a href="{% url 'staff_remove_admin' admin.pk %}"
+                     class="btn btn-outline-danger btn-sm py-0 px-2"
+                     style="font-size:.75rem;"
+                     title="Remove admin access">
+                    <i class="bi bi-person-dash"></i>
+                  </a>
                 {% endif %}
               </div>
             </div>
