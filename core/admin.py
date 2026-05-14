@@ -141,15 +141,15 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(InviteCode)
 class InviteCodeAdmin(admin.ModelAdmin):
-    list_display    = ('short_code', 'status_display', 'created_by', 'used_by', 'created_at')
+    list_display    = ('code_display', 'status_display', 'created_by', 'used_by', 'created_at')
     list_filter     = ('used_at',)
-    readonly_fields = ('code', 'created_by', 'used_by', 'used_at')
+    readonly_fields = ('code', 'used_by', 'used_at')
     search_fields   = ('code', 'used_by__username', 'created_by__username')
     exclude         = ('created_by',)
 
     @admin.display(description='Code')
-    def short_code(self, obj):
-        return obj.code
+    def code_display(self, obj):
+        return f"{str(obj.code)[:8]}…"
 
     @admin.display(description='Status')
     def status_display(self, obj):

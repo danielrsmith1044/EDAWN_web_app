@@ -103,12 +103,12 @@ def dashboard(request):
         .select_related('company')
         .order_by('company__name')
     )
-    # Recent messages: group messages + user's own private messages (staff see all)
+    # Recent messages: group messages + private messages the user sent or received (staff see all)
     if user.is_staff:
         recent_messages = Message.objects.all()[:5]
     else:
         recent_messages = Message.objects.filter(
-            Q(is_private=False) | Q(sender=user)
+            Q(is_private=False) | Q(sender=user) | Q(recipient=user)
         )[:5]
 
     my_badges = (
@@ -235,15 +235,13 @@ def create_admin(request):
             uid        = urlsafe_base64_encode(force_bytes(user.pk))
             token      = default_token_generator.make_token(user)
             reset_link = request.build_absolute_uri(f'/password-reset/{uid}/{token}/')
+            label = user.get_full_name() or user.username
+            role  = 'Superuser' if user.is_superuser else 'Admin'
 
             try:
                 notify_admin_welcome(user, reset_link)
-                label = user.get_full_name() or user.username
-                role  = 'Superuser' if user.is_superuser else 'Admin'
                 messages.success(request, f'{role} account created — invite email sent to {email}.')
             except Exception:
-                label = user.get_full_name() or user.username
-                role  = 'Superuser' if user.is_superuser else 'Admin'
                 messages.warning(request, f'{role} account created for {label} but email failed. '
                                           f'Use Staff → Volunteers to set a temporary password.')
             return redirect('staff_create_admin')
@@ -533,7 +531,7 @@ def message_list(request):
             qs = Message.objects.filter(is_private=True)
         else:
             qs = Message.objects.filter(
-                Q(is_private=True, sender=user) | Q(recipient=user)
+                Q(is_private=True) & (Q(sender=user) | Q(recipient=user))
             )
     else:
         qs = Message.objects.filter(is_private=False, recipient__isnull=True)
@@ -921,7 +919,6 @@ def staff_mark_bbv(request, pk):
         profile.bbv_certified      = True
         profile.bbv_certified_date = timezone.now()
         # Also award the badge if not already earned
-        from .models import Badge, UserBadge
         bbv_badge = Badge.objects.filter(name='Certified Business Builder Volunteer').first()
         if bbv_badge:
             UserBadge.objects.get_or_create(user=volunteer, badge=bbv_badge)
@@ -1101,9 +1098,11 @@ def company_browse(request):
     )
 
     # Current user's pending requests
-    my_requests = AssignmentRequest.objects.filter(
-        volunteer=request.user, status=AssignmentRequest.STATUS_PENDING
-    ).values_list('company_id', flat=True)
+    my_request_ids = set(
+        AssignmentRequest.objects.filter(
+            volunteer=request.user, status=AssignmentRequest.STATUS_PENDING
+        ).values_list('company_id', flat=True)
+    )
 
     profile = getattr(request.user, 'profile', None)
     at_cap = (
@@ -1115,8 +1114,8 @@ def company_browse(request):
         'companies':       companies,
         'industries':      industries,
         'industry_filter': industry_filter,
-        'my_request_ids':  set(my_requests),
-        'pending_count':   len(my_requests),
+        'my_request_ids':  my_request_ids,
+        'pending_count':   len(my_request_ids),
         'request_limit':   REQUEST_LIMIT,
         'at_cap':          at_cap,
     }

@@ -191,9 +191,10 @@ class VisitNote(models.Model):
         return f"Visit to {self.assignment.company.name} ({self.visit_date.date()})"
 
     def save(self, *args, **kwargs):
+        is_new = self._state.adding
         super().save(*args, **kwargs)
-        # Mark assignment and company as visited/completed
-        if self.assignment.status == Assignment.STATUS_ACTIVE:
+        # Mark assignment and company as visited/completed on first save only
+        if is_new and self.assignment.status == Assignment.STATUS_ACTIVE:
             from django.utils import timezone
             self.assignment.status = Assignment.STATUS_COMPLETED
             self.assignment.completed_date = timezone.now()
@@ -205,10 +206,12 @@ class VisitNote(models.Model):
         check_bbv_eligibility(self.visited_by)
         # Clear the inactivity flag so the volunteer can be re-alerted if they go inactive again
         UserProfile.objects.filter(user=self.visited_by).update(last_inactivity_notified=None)
-        from .emails import notify_staff_visit_submitted
-        notify_staff_visit_submitted(self)
-        from .salesforce import sync_visit_to_salesforce
-        sync_visit_to_salesforce(self)
+        # Staff notification and Salesforce sync only on initial creation, not edits
+        if is_new:
+            from .emails import notify_staff_visit_submitted
+            notify_staff_visit_submitted(self)
+            from .salesforce import sync_visit_to_salesforce
+            sync_visit_to_salesforce(self)
 
 
 class Badge(models.Model):

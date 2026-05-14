@@ -113,25 +113,27 @@ For bulk uploads, use **Import CSV** from the Quick Actions bar.
 
 **Preparing your file:**
 - Save the spreadsheet as a `.csv` file
-- The importer recognises these column names (case-insensitive, spaces or underscores):
+- The importer recognises these exact column names (case-sensitive):
 
-| Field | Example column names accepted |
+| Field | Column name(s) accepted |
 |---|---|
-| Company name | `name`, `company`, `company name` |
-| Industry | `industry`, `industry group` |
-| Address | `address`, `street`, `street address` |
+| Company name | `name` *(required)* |
+| Industry | `industry` |
+| Address | `address` |
 | City | `city` |
 | State | `state` |
-| Zip | `zip`, `zip code`, `postal code` |
-| Phone | `phone`, `phone number` |
+| Zip | `zip` or `zip_code` |
+| Phone | `phone` |
 | Email | `email` |
-| Website | `website`, `url` |
-| Contact name | `contact`, `contact name`, `primary contact` |
+| Website | `website` |
+| Primary contact name | `contact_name` or `primary_contact_name` |
+| Primary contact title | `contact_title` or `primary_contact_title` |
+| Notes | `notes` |
 
 - Columns that don't match any of the above are safely ignored
-- Companies that already exist (matched by name) are updated, not duplicated
+- Companies that already exist (matched by name) are skipped unless you tick **Update existing companies by name**
 
-Upload the file, review the preview, and click **Import**.
+Upload the file and click **Import**. A summary shows how many rows were created, updated, or skipped.
 
 ---
 
