@@ -968,6 +968,26 @@ def staff_set_temp_password(request, pk):
     return redirect('staff_volunteers')
 
 
+@staff_member_required
+def remove_volunteer(request, pk):
+    volunteer = get_object_or_404(User, pk=pk, is_staff=False, is_active=True)
+
+    if request.method == 'POST':
+        name = volunteer.get_full_name() or volunteer.username
+        volunteer.is_active = False
+        volunteer.save(update_fields=['is_active'])
+        messages.success(request, f"{name}'s account has been deactivated.")
+        return redirect('staff_volunteers')
+
+    active_assignments = Assignment.objects.filter(
+        volunteer=volunteer, status=Assignment.STATUS_ACTIVE
+    ).select_related('company')
+    return render(request, 'core/staff_remove_volunteer_confirm.html', {
+        'volunteer': volunteer,
+        'active_assignments': active_assignments,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Resource library
 # ---------------------------------------------------------------------------

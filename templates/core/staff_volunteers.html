@@ -77,6 +77,11 @@
                 <i class="bi bi-key me-1"></i>Temp Password
               </button>
             </form>
+            <a href="{% url 'staff_remove_volunteer' vol.pk %}"
+               class="btn btn-outline-danger py-0 px-2 mt-1"
+               style="font-size:.7rem;">
+              <i class="bi bi-person-dash me-1"></i>Remove
+            </a>
           </td>
           <td class="text-center">
             {% if vol.active_count %}

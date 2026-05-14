@@ -23,6 +23,7 @@ urlpatterns = [
     path('staff/volunteers/<int:pk>/training/',    views.staff_mark_training,       name='staff_mark_training'),
     path('staff/volunteers/<int:pk>/bbv/',          views.staff_mark_bbv,            name='staff_mark_bbv'),
     path('staff/volunteers/<int:pk>/temp-password/', views.staff_set_temp_password,  name='staff_set_temp_password'),
+    path('staff/volunteers/<int:pk>/remove/',        views.remove_volunteer,          name='staff_remove_volunteer'),
     path('staff/add-company/', views.quick_add_company, name='staff_add_company'),
     path('staff/assign/',      views.quick_assign,      name='staff_assign'),
     path('staff/invite/',      views.quick_invite,      name='staff_invite'),
