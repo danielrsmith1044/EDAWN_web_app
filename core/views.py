@@ -16,10 +16,13 @@ from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .emails import notify_invite
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from .emails import notify_admin_welcome, notify_invite
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
-                     MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, CreateAdminForm,
+                     MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, InviteAdminForm,
                      CompanyCSVUploadForm, VisitExportForm, NoticeForm, ResourceForm)
 from .ratelimit import ratelimit
 
@@ -204,15 +207,48 @@ def quick_assign(request):
 @staff_member_required
 def create_admin(request):
     if request.method == 'POST':
-        form = CreateAdminForm(request.POST)
+        form = InviteAdminForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            label = user.get_full_name() or user.username
-            role  = 'Superuser' if user.is_superuser else 'Admin'
-            messages.success(request, f'{role} account created for {label}.')
+            email      = form.cleaned_data['email']
+            first_name = form.cleaned_data.get('first_name', '')
+            last_name  = form.cleaned_data.get('last_name', '')
+
+            # Auto-generate a unique username from the email local part
+            base = email.split('@')[0].lower()
+            base = ''.join(c for c in base if c.isalnum() or c in '._-')[:30]
+            username = base
+            suffix = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base}{suffix}"
+                suffix += 1
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                password=User.objects.make_random_password(20),
+                is_staff=True,
+                is_superuser=form.cleaned_data['is_superuser'],
+            )
+
+            uid        = urlsafe_base64_encode(force_bytes(user.pk))
+            token      = default_token_generator.make_token(user)
+            reset_link = request.build_absolute_uri(f'/password-reset/{uid}/{token}/')
+
+            try:
+                notify_admin_welcome(user, reset_link)
+                label = user.get_full_name() or user.username
+                role  = 'Superuser' if user.is_superuser else 'Admin'
+                messages.success(request, f'{role} account created — invite email sent to {email}.')
+            except Exception:
+                label = user.get_full_name() or user.username
+                role  = 'Superuser' if user.is_superuser else 'Admin'
+                messages.warning(request, f'{role} account created for {label} but email failed. '
+                                          f'Use Staff → Volunteers to set a temporary password.')
             return redirect('create_admin')
     else:
-        form = CreateAdminForm()
+        form = InviteAdminForm()
     admins = list(User.objects.filter(is_staff=True).order_by('username'))
     return render(request, 'core/admin_create_admin.html', {'form': form, 'admins': admins})
 

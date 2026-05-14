@@ -204,6 +204,23 @@ class ReplyForm(forms.ModelForm):
 # Admin (portal-side)
 # ---------------------------------------------------------------------------
 
+class InviteAdminForm(forms.Form):
+    first_name   = forms.CharField(max_length=50, required=False,
+                                   widget=forms.TextInput(attrs={**_fc, 'placeholder': 'First name'}))
+    last_name    = forms.CharField(max_length=50, required=False,
+                                   widget=forms.TextInput(attrs={**_fc, 'placeholder': 'Last name'}))
+    email        = forms.EmailField(widget=forms.EmailInput(attrs={**_fc, 'placeholder': 'Email address'}))
+    is_superuser = forms.BooleanField(required=False, label='Grant superuser privileges',
+                                      help_text='Superusers have full access including the Django admin panel.',
+                                      widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("An account with that email already exists.")
+        return email
+
+
 class CreateAdminForm(UserCreationForm):
     first_name   = forms.CharField(max_length=50, required=False,
                                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First name'}))
