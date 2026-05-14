@@ -55,7 +55,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            messages.success(request, f'Welcome, {user.username}! Your account was created.')
+            messages.success(request, f'Welcome, {user.first_name or user.username}! Your account was created.')
             return redirect('dashboard')
     else:
         initial = {}

@@ -11,19 +11,28 @@ _fs = {'class': 'form-select'}
 # Auth
 # ---------------------------------------------------------------------------
 
-class RegisterForm(UserCreationForm):
-    email       = forms.EmailField(required=True)
-    first_name  = forms.CharField(max_length=50, required=False)
-    last_name   = forms.CharField(max_length=50, required=False)
+class RegisterForm(forms.Form):
+    first_name  = forms.CharField(max_length=50, required=False,
+                                  widget=forms.TextInput(attrs={**_fc, 'placeholder': 'First name'}))
+    last_name   = forms.CharField(max_length=50, required=False,
+                                  widget=forms.TextInput(attrs={**_fc, 'placeholder': 'Last name'}))
+    email       = forms.EmailField(
+                                  widget=forms.EmailInput(attrs={**_fc, 'placeholder': 'Email address'}))
+    password1   = forms.CharField(label='Password',
+                                  widget=forms.PasswordInput(attrs=_fc))
+    password2   = forms.CharField(label='Confirm Password',
+                                  widget=forms.PasswordInput(attrs=_fc))
     invite_code = forms.CharField(
         max_length=40,
         help_text="Enter the invite code provided by your admin.",
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Invite code'}),
+        widget=forms.TextInput(attrs={**_fc, 'placeholder': 'Invite code'}),
     )
 
-    class Meta:
-        model  = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("An account with that email already exists.")
+        return email
 
     def clean_invite_code(self):
         code = self.cleaned_data['invite_code'].strip()
@@ -36,18 +45,38 @@ class RegisterForm(UserCreationForm):
         self._invite = invite
         return code
 
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email      = self.cleaned_data['email']
-        user.first_name = self.cleaned_data.get('first_name', '')
-        user.last_name  = self.cleaned_data.get('last_name', '')
-        if commit:
-            user.save()
-            # Mark invite code as used
-            from django.utils import timezone
-            self._invite.used_by = user
-            self._invite.used_at = timezone.now()
-            self._invite.save(update_fields=['used_by', 'used_at'])
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get('password1')
+        p2 = cleaned.get('password2')
+        if p1 and p2 and p1 != p2:
+            self.add_error('password2', "Passwords do not match.")
+        return cleaned
+
+    def save(self):
+        from django.utils import timezone
+        email      = self.cleaned_data['email']
+        first_name = self.cleaned_data.get('first_name', '')
+        last_name  = self.cleaned_data.get('last_name', '')
+
+        base = email.split('@')[0].lower()
+        base = ''.join(c for c in base if c.isalnum() or c in '._-')[:30]
+        username = base
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base}{suffix}"
+            suffix += 1
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=self.cleaned_data['password1'],
+            first_name=first_name,
+            last_name=last_name,
+        )
+        self._invite.used_by = user
+        self._invite.used_at = timezone.now()
+        self._invite.save(update_fields=['used_by', 'used_at'])
         return user
 
 
