@@ -246,7 +246,7 @@ def create_admin(request):
                 role  = 'Superuser' if user.is_superuser else 'Admin'
                 messages.warning(request, f'{role} account created for {label} but email failed. '
                                           f'Use Staff → Volunteers to set a temporary password.')
-            return redirect('create_admin')
+            return redirect('staff_create_admin')
     else:
         form = InviteAdminForm()
     admins = list(User.objects.filter(is_staff=True).order_by('username'))
