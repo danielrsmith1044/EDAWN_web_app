@@ -227,7 +227,7 @@ def create_admin(request):
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
-                password=User.objects.make_random_password(20),
+                password=secrets.token_urlsafe(20),
                 is_staff=True,
                 is_superuser=form.cleaned_data['is_superuser'],
             )
