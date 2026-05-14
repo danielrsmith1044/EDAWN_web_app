@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Assignment, AssignmentRequest, Company, ContactAttempt, InviteCode, Notice, Resource, VisitNote, Message, Reply
 
@@ -249,37 +248,6 @@ class InviteAdminForm(forms.Form):
             raise forms.ValidationError("An account with that email already exists.")
         return email
 
-
-class CreateAdminForm(UserCreationForm):
-    first_name   = forms.CharField(max_length=50, required=False,
-                                   widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First name'}))
-    last_name    = forms.CharField(max_length=50, required=False,
-                                   widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last name'}))
-    email        = forms.EmailField(required=True,
-                                    widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email address'}))
-    is_superuser = forms.BooleanField(required=False, label='Grant superuser privileges',
-                                      help_text='Superusers have full access including the Django admin panel.',
-                                      widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
-
-    class Meta:
-        model  = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name in ('username', 'password1', 'password2'):
-            self.fields[field_name].widget.attrs['class'] = 'form-control'
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email        = self.cleaned_data['email']
-        user.first_name   = self.cleaned_data['first_name']
-        user.last_name    = self.cleaned_data['last_name']
-        user.is_staff     = True
-        user.is_superuser = self.cleaned_data['is_superuser']
-        if commit:
-            user.save()
-        return user
 
 class QuickCompanyForm(forms.ModelForm):
     class Meta:
