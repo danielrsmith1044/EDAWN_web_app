@@ -75,6 +75,26 @@ def notify_staff_visit_submitted(visit_note):
     )
 
 
+def notify_admin_welcome(user, reset_link):
+    """Send a new admin their account details and a password-set link."""
+    name = user.first_name or user.username
+    send_mail(
+        subject='Your EDAWN Business Builders admin account is ready',
+        message=(
+            f"Hi {name},\n\n"
+            f"An admin account has been created for you on the EDAWN Business Builders portal.\n\n"
+            f"Username: {user.username}\n\n"
+            f"Set your password and log in here:\n"
+            f"{reset_link}\n\n"
+            f"This link expires in 24 hours. If you have questions, contact kim.yaegar@edawn.org.\n\n"
+            f"— EDAWN Business Builders"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
+
+
 def notify_invite(email, invite_link):
     """Send a registration invite link directly to a prospective volunteer."""
     send_mail(
