@@ -251,6 +251,29 @@ def create_admin(request):
     return render(request, 'core/admin_create_admin.html', {'form': form, 'admins': admins})
 
 
+@login_required
+def remove_admin(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Only superusers can remove admin accounts.")
+        return redirect('staff_create_admin')
+
+    target = get_object_or_404(User, pk=pk, is_staff=True)
+
+    if target == request.user:
+        messages.error(request, "You cannot remove your own admin account.")
+        return redirect('staff_create_admin')
+
+    if request.method == 'POST':
+        name = target.get_full_name() or target.username
+        target.is_staff = False
+        target.is_superuser = False
+        target.save(update_fields=['is_staff', 'is_superuser'])
+        messages.success(request, f"Admin account for {name} has been removed.")
+        return redirect('staff_create_admin')
+
+    return render(request, 'core/admin_remove_confirm.html', {'target': target})
+
+
 @staff_member_required
 def quick_invite(request):
     invite_link = None
@@ -943,6 +966,26 @@ def staff_set_temp_password(request, pk):
         name, temp_pw,
     ))
     return redirect('staff_volunteers')
+
+
+@staff_member_required
+def remove_volunteer(request, pk):
+    volunteer = get_object_or_404(User, pk=pk, is_staff=False, is_active=True)
+
+    if request.method == 'POST':
+        name = volunteer.get_full_name() or volunteer.username
+        volunteer.is_active = False
+        volunteer.save(update_fields=['is_active'])
+        messages.success(request, f"{name}'s account has been deactivated.")
+        return redirect('staff_volunteers')
+
+    active_assignments = Assignment.objects.filter(
+        volunteer=volunteer, status=Assignment.STATUS_ACTIVE
+    ).select_related('company')
+    return render(request, 'core/staff_remove_volunteer_confirm.html', {
+        'volunteer': volunteer,
+        'active_assignments': active_assignments,
+    })
 
 
 # ---------------------------------------------------------------------------

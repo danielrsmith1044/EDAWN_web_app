@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Remove Volunteer – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_dashboard' %}">Staff Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff_volunteers' %}">Volunteer Roster</a></li>
+      <li class="breadcrumb-item active">Remove Volunteer</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-person-dash me-2"></i>Remove Volunteer</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card border-danger">
+      <div class="card-header py-3 text-white" style="background:var(--bs-danger);">
+        <span><i class="bi bi-exclamation-triangle me-2"></i>Confirm Removal</span>
+      </div>
+      <div class="card-body p-4">
+        <p class="mb-3">You are about to deactivate this volunteer account:</p>
+
+        <div class="d-flex align-items-center gap-3 p-3 rounded mb-4" style="background:var(--edawn-blue-light);">
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+               style="width:42px; height:42px; background:var(--edawn-teal-light); border:2px solid var(--edawn-teal);">
+            <i class="bi bi-person-fill" style="color:var(--edawn-teal);"></i>
+          </div>
+          <div>
+            <div class="fw-semibold" style="color:var(--edawn-blue);">{{ volunteer.get_full_name|default:volunteer.username }}</div>
+            <div class="text-muted small">@{{ volunteer.username }} &middot; {{ volunteer.email }}</div>
+          </div>
+        </div>
+
+        {% if active_assignments %}
+        <div class="alert alert-warning d-flex gap-2 mb-4">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+          <div>
+            <strong>This volunteer has {{ active_assignments|length }} active assignment{{ active_assignments|length|pluralize }}:</strong>
+            <ul class="mb-0 mt-1 ps-3 small">
+              {% for a in active_assignments %}
+              <li>{{ a.company.name }}</li>
+              {% endfor %}
+            </ul>
+            <div class="mt-1 small">These assignments will remain in the system but the volunteer will lose access.</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <p class="text-muted small mb-4">
+          Their account will be deactivated — they will no longer be able to log in.
+          All assignment and visit history is preserved.
+        </p>
+
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-person-dash me-1"></i>Yes, Deactivate Account
+            </button>
+          </form>
+          <a href="{% url 'staff_volunteers' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
