@@ -16,9 +16,10 @@ A volunteer management web app for the Economic Development Authority of Western
 
 **Staff**
 - **Staff Dashboard** — Stats overview, recent assignments, overdue volunteer alerts, pending request count
-- **Volunteer Roster** — Full roster with training and BBV certification toggles, temporary password reset
+- **Volunteer Roster** — Full roster with training and BBV certification toggles, temporary password reset, and volunteer account deactivation
 - **Assignment Requests** — Approve or deny volunteer requests; approving one auto-denies competing requests
 - **Company Management** — Add companies, bulk CSV import, assign to volunteers
+- **Admin Management** — Create admin and superuser accounts; superusers can remove admin accounts
 - **Notices** — Create time-limited announcements with optional links; expire automatically
 - **Resources** — Add, edit, and hide resource links by category
 - **Visit Export** — CSV export of visit data filtered by date, industry, or volunteer
@@ -73,7 +74,8 @@ Visit `http://localhost:8000`. Log in with the superuser you created, or with a 
 | Role | Access |
 |------|--------|
 | **Volunteer** | Dashboard, company browse/request, assigned companies, contact/visit logging, badges, leaderboard, messages, resources |
-| **Staff** | All volunteer features + staff dashboard, volunteer roster, assignment request management, company management, notices, resource management, CSV import/export, invite links |
+| **Staff (Admin)** | All volunteer features + staff dashboard, volunteer roster (incl. deactivating volunteers), assignment request management, company management, notices, resource management, CSV import/export, invite links, create admin accounts |
+| **Staff (Superuser)** | All admin features + remove admin accounts, full Django admin (`/admin/`) |
 
 ## Management Commands
 
@@ -82,6 +84,7 @@ Visit `http://localhost:8000`. Log in with the superuser you created, or with a 
 | `python manage.py seed_data` | Populate database with test data |
 | `python manage.py createsuperuser` | Create an admin account |
 | `python manage.py send_inactivity_reminders` | Email volunteers inactive 30+ days; alert staff at 45+ days (run daily via Render cron job) |
+| `python manage.py remove_superuser [--username USERNAME] [--remove-staff]` | Strip superuser (and optionally staff) status from a user; defaults to the `admin` account |
 
 ## Environment Variables
 
