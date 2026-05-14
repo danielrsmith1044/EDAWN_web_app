@@ -86,7 +86,7 @@ def notify_admin_welcome(user, reset_link):
             f"Username: {user.username}\n\n"
             f"Set your password and log in here:\n"
             f"{reset_link}\n\n"
-            f"This link expires in 24 hours. If you have questions, reply to this email.\n\n"
+            f"This link expires in 24 hours. If you have questions, contact kim.yaegar@edawn.org.\n\n"
             f"— EDAWN Business Builders"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
